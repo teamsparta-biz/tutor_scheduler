@@ -252,6 +252,7 @@ export default function Instructors() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-left text-gray-500">
+                <th className="pb-3 font-medium w-10"></th>
                 <th className="pb-3 font-medium">이름</th>
                 <th className="pb-3 font-medium">이메일</th>
                 <th className="pb-3 font-medium">연락처</th>
@@ -263,6 +264,17 @@ export default function Instructors() {
             <tbody>
               {filtered.map((inst) => (
                 <tr key={inst.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3">
+                    <button
+                      onClick={() => setCalendarTarget(inst)}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-green-50 text-green-600 hover:bg-green-100 cursor-pointer transition"
+                      title={`${inst.name} 일정 보기`}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                  </td>
                   <td className="py-3 font-medium text-gray-800">{inst.name}</td>
                   <td className="py-3 text-gray-600">{inst.email ?? '-'}</td>
                   <td className="py-3 text-gray-600">{inst.phone ?? '-'}</td>
@@ -278,13 +290,7 @@ export default function Instructors() {
                       {inst.is_active ? '활성' : '비활성'}
                     </span>
                   </td>
-                  <td className="py-3 text-right space-x-2">
-                    <button
-                      onClick={() => setCalendarTarget(inst)}
-                      className="text-green-600 hover:text-green-800 text-sm cursor-pointer"
-                    >
-                      일정
-                    </button>
+                  <td className="py-3 text-right">
                     <button
                       onClick={() => { setEditTarget(inst); setModalOpen(true) }}
                       className="text-blue-600 hover:text-blue-800 text-sm cursor-pointer"
@@ -296,7 +302,7 @@ export default function Instructors() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-gray-400">검색 결과가 없습니다</td>
+                  <td colSpan={7} className="py-8 text-center text-gray-400">검색 결과가 없습니다</td>
                 </tr>
               )}
             </tbody>
