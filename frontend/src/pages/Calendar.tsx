@@ -24,7 +24,6 @@ function getCalendarDays(year: number, month: number): CalendarDay[] {
   const lastDay = new Date(year, month + 1, 0)
   const startDow = firstDay.getDay()
   const days: CalendarDay[] = []
-
   for (let i = startDow - 1; i >= 0; i--) {
     const d = new Date(year, month, -i)
     days.push({ date: d, dateStr: formatDateStr(d), isCurrentMonth: false })
@@ -46,7 +45,6 @@ function getEventsForDate(dateStr: string, filterInstructor: string) {
     if (filterInstructor !== 'all' && a.instructor_id !== filterInstructor) return false
     return true
   })
-
   return assignments.map((a) => {
     const cd = mockCourseDates.find((c) => c.id === a.course_date_id)
     const course = cd ? mockCourses.find((c) => c.id === cd.course_id) : null
@@ -65,21 +63,47 @@ function getEventsForDate(dateStr: string, filterInstructor: string) {
   })
 }
 
+// 해당 날짜에 강사가 미배정인 교육 일정 조회 (완료 교육 제외)
+function getUnassignedForDate(dateStr: string) {
+  const courseDatesOnDay = mockCourseDates.filter((cd) => cd.date === dateStr)
+  const unassigned: { courseDateId: string; courseTitle: string; courseId: string; dayNumber: number; pms: string[] }[] = []
+
+  for (const cd of courseDatesOnDay) {
+    const course = mockCourses.find((c) => c.id === cd.course_id)
+    if (!course || course.status === '완료') continue
+    const hasAssignment = mockAssignments.some((a) => a.course_date_id === cd.id)
+    if (!hasAssignment) {
+      unassigned.push({
+        courseDateId: cd.id,
+        courseTitle: course.title,
+        courseId: course.id,
+        dayNumber: cd.day_number,
+        pms: mockCoursePMs[course.id] ?? [],
+      })
+    }
+  }
+  return unassigned
+}
+
+// 날짜에 이벤트가 있는지 (배정 or 미배정 포함)
+function hasAnyEvent(dateStr: string, filterInstructor: string) {
+  return getEventsForDate(dateStr, filterInstructor).length > 0 || getUnassignedForDate(dateStr).length > 0
+}
+
 export default function Calendar() {
   const [currentYear, setCurrentYear] = useState(2026)
-  const [currentMonth, setCurrentMonth] = useState(1) // 0-indexed: 1 = February
-  const [selectedDate, setSelectedDate] = useState<string | null>('2026-02-18')
+  const [currentMonth, setCurrentMonth] = useState(1)
+  const [selectedDate, setSelectedDate] = useState<string | null>('2026-02-19')
   const [filterInstructor, setFilterInstructor] = useState('all')
 
   const days = useMemo(() => getCalendarDays(currentYear, currentMonth), [currentYear, currentMonth])
   const monthLabel = `${currentYear}년 ${currentMonth + 1}월`
 
   const weeks: CalendarDay[][] = []
-  for (let i = 0; i < days.length; i += 7) {
-    weeks.push(days.slice(i, i + 7))
-  }
+  for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7))
 
   const events = selectedDate ? getEventsForDate(selectedDate, filterInstructor) : []
+  const unassigned = selectedDate ? getUnassignedForDate(selectedDate) : []
 
   function prevMonth() {
     if (currentMonth === 0) { setCurrentYear(currentYear - 1); setCurrentMonth(11) }
@@ -106,7 +130,6 @@ export default function Calendar() {
         </select>
       </div>
 
-      {/* 월 이동 */}
       <div className="flex items-center gap-3 mb-4">
         <button onClick={prevMonth} className="p-1.5 rounded hover:bg-gray-200 cursor-pointer text-gray-600">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -121,7 +144,6 @@ export default function Calendar() {
         </button>
       </div>
 
-      {/* 분할 뷰: 미니 캘린더 + 상세 */}
       <div className="flex gap-6">
         {/* 미니 캘린더 */}
         <div className="w-72 flex-shrink-0 bg-white rounded-lg shadow p-4">
@@ -129,15 +151,14 @@ export default function Calendar() {
             {WEEKDAYS.map((wd, i) => (
               <div key={wd} className={`text-center text-xs font-medium py-1 ${
                 i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-400'
-              }`}>
-                {wd}
-              </div>
+              }`}>{wd}</div>
             ))}
           </div>
           {weeks.map((week, wi) => (
             <div key={wi} className="grid grid-cols-7">
               {week.map((day) => {
-                const hasEvents = getEventsForDate(day.dateStr, filterInstructor).length > 0
+                const has = hasAnyEvent(day.dateStr, filterInstructor)
+                const hasUnassigned = getUnassignedForDate(day.dateStr).length > 0
                 const isSelected = selectedDate === day.dateStr
                 const dow = day.date.getDay()
                 return (
@@ -149,14 +170,22 @@ export default function Calendar() {
                     } ${isSelected ? 'bg-blue-600 text-white' : dow === 0 ? 'text-red-500 hover:bg-red-50' : dow === 6 ? 'text-blue-500 hover:bg-blue-50' : 'text-gray-700 hover:bg-gray-100'}`}
                   >
                     {day.date.getDate()}
-                    {hasEvents && !isSelected && (
-                      <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-blue-500" />
+                    {has && !isSelected && (
+                      <span className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${
+                        hasUnassigned ? 'bg-amber-500' : 'bg-blue-500'
+                      }`} />
                     )}
                   </button>
                 )
               })}
             </div>
           ))}
+
+          {/* 범례 */}
+          <div className="mt-3 pt-3 border-t border-gray-200 flex items-center gap-3 text-xs text-gray-400">
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> 배정 완료</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> 미배정 있음</span>
+          </div>
         </div>
 
         {/* 상세 패널 */}
@@ -164,6 +193,32 @@ export default function Calendar() {
           {selectedDate ? (
             <div>
               <h3 className="text-lg font-semibold text-gray-800 mb-4">{selectedDate} 일정</h3>
+
+              {/* 미배정 경고 */}
+              {unassigned.length > 0 && (
+                <div className="mb-4 space-y-2">
+                  {unassigned.map((u) => {
+                    const colors = courseColors[u.courseId] ?? { bg: 'bg-gray-50', text: 'text-gray-700', dot: 'bg-gray-500' }
+                    return (
+                      <div key={u.courseDateId} className="p-4 rounded-lg border border-amber-300 bg-amber-50">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${colors.dot}`} />
+                            <span className={`font-medium ${colors.text}`}>{u.courseTitle}</span>
+                            <span className="text-xs text-gray-500">Day {u.dayNumber}</span>
+                          </div>
+                          <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-xs font-medium">미배정</span>
+                        </div>
+                        {u.pms.length > 0 && (
+                          <div className="text-xs text-gray-500 mt-1">PM: {u.pms.join(', ')}</div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* 배정된 일정 */}
               {events.length > 0 ? (
                 <div className="space-y-3">
                   {events.map((ev) => (
@@ -177,16 +232,14 @@ export default function Calendar() {
                         <span className="px-2 py-0.5 bg-white/60 rounded text-xs">{ev.className}</span>
                       </div>
                       {ev.pms.length > 0 && (
-                        <div className="mt-2 text-xs text-gray-500">
-                          PM: {ev.pms.join(', ')}
-                        </div>
+                        <div className="mt-2 text-xs text-gray-500">PM: {ev.pms.join(', ')}</div>
                       )}
                     </div>
                   ))}
                 </div>
-              ) : (
+              ) : unassigned.length === 0 ? (
                 <p className="text-gray-400 text-sm">이 날짜에 예정된 일정이 없습니다</p>
-              )}
+              ) : null}
             </div>
           ) : (
             <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
