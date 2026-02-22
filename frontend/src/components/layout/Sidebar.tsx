@@ -4,6 +4,7 @@ const navItems = [
   { to: '/', label: '대시보드' },
   { to: '/instructors', label: '강사 관리' },
   { to: '/courses', label: '교육 일정' },
+  { to: '/availability', label: '강사 가용성' },
   { to: '/assignments', label: '강사 배정' },
   { to: '/calendar', label: '캘린더' },
 ]

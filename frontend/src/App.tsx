@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Instructors from './pages/Instructors'
 import Courses from './pages/Courses'
+import Availability from './pages/Availability'
 import Assignments from './pages/Assignments'
 import Calendar from './pages/Calendar'
 
@@ -15,6 +16,7 @@ function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/instructors" element={<Instructors />} />
         <Route path="/courses" element={<Courses />} />
+        <Route path="/availability" element={<Availability />} />
         <Route path="/assignments" element={<Assignments />} />
         <Route path="/calendar" element={<Calendar />} />
       </Route>

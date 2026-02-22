@@ -40,3 +40,12 @@ export interface Assignment {
   created_at: string
   updated_at: string
 }
+
+export interface InstructorAvailability {
+  id: string
+  instructor_id: string
+  date: string
+  status: 'available' | 'unavailable' | 'pending'
+  created_at: string
+  updated_at: string
+}

@@ -1,4 +1,4 @@
-import type { Instructor, Course, CourseDate, Assignment } from '../types'
+import type { Instructor, Course, CourseDate, Assignment, InstructorAvailability } from '../types'
 
 export const mockInstructors: Instructor[] = [
   {
@@ -118,4 +118,52 @@ export const mockAssignments: Assignment[] = [
   // Course 2, Feb 18 — 김민수(inst-1)가 Course 1에도 배정 → 중복!
   { id: 'asgn-7', course_date_id: 'cd-4', instructor_id: 'inst-4', date: '2026-02-18', class_name: 'A반', created_by: null, created_at: '2026-02-12T09:00:00Z', updated_at: '2026-02-12T09:00:00Z' },
   { id: 'asgn-8', course_date_id: 'cd-4', instructor_id: 'inst-1', date: '2026-02-18', class_name: 'B반', created_by: null, created_at: '2026-02-12T09:00:00Z', updated_at: '2026-02-12T09:00:00Z' },
+]
+
+// 교육별 담당 PM (복수 가능)
+export const mockCoursePMs: Record<string, string[]> = {
+  'course-1': ['김태희', '이준호'],
+  'course-2': ['박소연'],
+  'course-3': ['김태희'],
+}
+
+// 강사 가용성 데이터 (2026년 2월 16일 ~ 28일)
+const ts = '2026-02-10T09:00:00Z'
+export const mockAvailability: InstructorAvailability[] = [
+  // 김민수 (inst-1)
+  { id: 'av-01', instructor_id: 'inst-1', date: '2026-02-16', status: 'available', created_at: ts, updated_at: ts },
+  { id: 'av-02', instructor_id: 'inst-1', date: '2026-02-17', status: 'available', created_at: ts, updated_at: ts },
+  { id: 'av-03', instructor_id: 'inst-1', date: '2026-02-18', status: 'available', created_at: ts, updated_at: ts },
+  { id: 'av-04', instructor_id: 'inst-1', date: '2026-02-19', status: 'unavailable', created_at: ts, updated_at: ts },
+  { id: 'av-05', instructor_id: 'inst-1', date: '2026-02-20', status: 'available', created_at: ts, updated_at: ts },
+  { id: 'av-06', instructor_id: 'inst-1', date: '2026-02-23', status: 'available', created_at: ts, updated_at: ts },
+  { id: 'av-07', instructor_id: 'inst-1', date: '2026-02-24', status: 'pending', created_at: ts, updated_at: ts },
+  { id: 'av-08', instructor_id: 'inst-1', date: '2026-02-25', status: 'available', created_at: ts, updated_at: ts },
+  // 이서연 (inst-2)
+  { id: 'av-09', instructor_id: 'inst-2', date: '2026-02-16', status: 'unavailable', created_at: ts, updated_at: ts },
+  { id: 'av-10', instructor_id: 'inst-2', date: '2026-02-17', status: 'available', created_at: ts, updated_at: ts },
+  { id: 'av-11', instructor_id: 'inst-2', date: '2026-02-18', status: 'available', created_at: ts, updated_at: ts },
+  { id: 'av-12', instructor_id: 'inst-2', date: '2026-02-19', status: 'available', created_at: ts, updated_at: ts },
+  { id: 'av-13', instructor_id: 'inst-2', date: '2026-02-20', status: 'unavailable', created_at: ts, updated_at: ts },
+  { id: 'av-14', instructor_id: 'inst-2', date: '2026-02-23', status: 'pending', created_at: ts, updated_at: ts },
+  { id: 'av-15', instructor_id: 'inst-2', date: '2026-02-24', status: 'available', created_at: ts, updated_at: ts },
+  { id: 'av-16', instructor_id: 'inst-2', date: '2026-02-25', status: 'available', created_at: ts, updated_at: ts },
+  // 박준혁 (inst-3)
+  { id: 'av-17', instructor_id: 'inst-3', date: '2026-02-16', status: 'available', created_at: ts, updated_at: ts },
+  { id: 'av-18', instructor_id: 'inst-3', date: '2026-02-17', status: 'unavailable', created_at: ts, updated_at: ts },
+  { id: 'av-19', instructor_id: 'inst-3', date: '2026-02-18', status: 'available', created_at: ts, updated_at: ts },
+  { id: 'av-20', instructor_id: 'inst-3', date: '2026-02-19', status: 'available', created_at: ts, updated_at: ts },
+  { id: 'av-21', instructor_id: 'inst-3', date: '2026-02-20', status: 'available', created_at: ts, updated_at: ts },
+  { id: 'av-22', instructor_id: 'inst-3', date: '2026-02-23', status: 'unavailable', created_at: ts, updated_at: ts },
+  { id: 'av-23', instructor_id: 'inst-3', date: '2026-02-24', status: 'available', created_at: ts, updated_at: ts },
+  { id: 'av-24', instructor_id: 'inst-3', date: '2026-02-25', status: 'pending', created_at: ts, updated_at: ts },
+  // 최유진 (inst-4)
+  { id: 'av-25', instructor_id: 'inst-4', date: '2026-02-16', status: 'available', created_at: ts, updated_at: ts },
+  { id: 'av-26', instructor_id: 'inst-4', date: '2026-02-17', status: 'available', created_at: ts, updated_at: ts },
+  { id: 'av-27', instructor_id: 'inst-4', date: '2026-02-18', status: 'pending', created_at: ts, updated_at: ts },
+  { id: 'av-28', instructor_id: 'inst-4', date: '2026-02-19', status: 'available', created_at: ts, updated_at: ts },
+  { id: 'av-29', instructor_id: 'inst-4', date: '2026-02-20', status: 'available', created_at: ts, updated_at: ts },
+  { id: 'av-30', instructor_id: 'inst-4', date: '2026-02-23', status: 'available', created_at: ts, updated_at: ts },
+  { id: 'av-31', instructor_id: 'inst-4', date: '2026-02-24', status: 'unavailable', created_at: ts, updated_at: ts },
+  { id: 'av-32', instructor_id: 'inst-4', date: '2026-02-25', status: 'available', created_at: ts, updated_at: ts },
 ]
