@@ -52,14 +52,15 @@ function StatCard({ title, value, sub, color }: { title: string; value: string; 
 }
 
 function ScheduleItem({ item }: { item: ReturnType<typeof enrichAssignment> }) {
-  const courseColors: Record<string, { bg: string; border: string; dot: string }> = {
-    'course-1': { bg: 'bg-blue-50', border: 'border-blue-200', dot: 'bg-blue-500' },
-    'course-2': { bg: 'bg-green-50', border: 'border-green-200', dot: 'bg-green-500' },
-    'course-3': { bg: 'bg-purple-50', border: 'border-purple-200', dot: 'bg-purple-500' },
+  const statusColors: Record<string, { bg: string; border: string; dot: string }> = {
+    '진행중': { bg: 'bg-blue-50', border: 'border-blue-200', dot: 'bg-blue-500' },
+    '예정': { bg: 'bg-green-50', border: 'border-green-200', dot: 'bg-green-500' },
+    '완료': { bg: 'bg-gray-50', border: 'border-gray-200', dot: 'bg-gray-400' },
   }
   const cd = mockCourseDates.find((c) => c.id === item.course_date_id)
   const course = cd ? mockCourses.find((c) => c.id === cd.course_id) : null
-  const colors = course ? courseColors[course.id] ?? { bg: 'bg-gray-50', border: 'border-gray-200', dot: 'bg-gray-500' } : { bg: 'bg-gray-50', border: 'border-gray-200', dot: 'bg-gray-500' }
+  const defaultColors = { bg: 'bg-gray-50', border: 'border-gray-200', dot: 'bg-gray-500' }
+  const colors = course?.status ? statusColors[course.status] ?? defaultColors : defaultColors
 
   return (
     <div className={`flex items-start gap-4 p-3 rounded-lg border ${colors.bg} ${colors.border}`}>

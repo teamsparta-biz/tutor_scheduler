@@ -3,10 +3,10 @@ import { mockCourses, mockCourseDates, mockAssignments, mockInstructors, mockCou
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
-const courseColors: Record<string, { bg: string; text: string; dot: string }> = {
-  'course-1': { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
-  'course-2': { bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
-  'course-3': { bg: 'bg-purple-50', text: 'text-purple-700', dot: 'bg-purple-500' },
+const statusColors: Record<string, { bg: string; text: string; dot: string }> = {
+  '진행중': { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
+  '예정': { bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
+  '완료': { bg: 'bg-gray-50', text: 'text-gray-500', dot: 'bg-gray-400' },
 }
 
 function formatDateStr(d: Date): string {
@@ -49,12 +49,12 @@ function getEventsForDate(dateStr: string, filterInstructor: string) {
     const cd = mockCourseDates.find((c) => c.id === a.course_date_id)
     const course = cd ? mockCourses.find((c) => c.id === cd.course_id) : null
     const instructor = mockInstructors.find((i) => i.id === a.instructor_id)
-    const colors = course ? courseColors[course.id] ?? { bg: 'bg-gray-50', text: 'text-gray-700', dot: 'bg-gray-500' } : { bg: 'bg-gray-50', text: 'text-gray-700', dot: 'bg-gray-500' }
+    const defaultColors = { bg: 'bg-gray-50', text: 'text-gray-700', dot: 'bg-gray-500' }
+    const colors = course?.status ? statusColors[course.status] ?? defaultColors : defaultColors
     const pms = course ? mockCoursePMs[course.id] ?? [] : []
     return {
       id: a.id,
       courseTitle: course?.title ?? '-',
-      courseId: course?.id ?? '',
       instructorName: instructor?.name ?? '-',
       className: a.class_name,
       colors,
@@ -66,7 +66,7 @@ function getEventsForDate(dateStr: string, filterInstructor: string) {
 // 해당 날짜에 강사가 미배정인 교육 일정 조회 (완료 교육 제외)
 function getUnassignedForDate(dateStr: string) {
   const courseDatesOnDay = mockCourseDates.filter((cd) => cd.date === dateStr)
-  const unassigned: { courseDateId: string; courseTitle: string; courseId: string; dayNumber: number; pms: string[] }[] = []
+  const unassigned: { courseDateId: string; courseTitle: string; courseStatus: string | null; dayNumber: number; pms: string[] }[] = []
 
   for (const cd of courseDatesOnDay) {
     const course = mockCourses.find((c) => c.id === cd.course_id)
@@ -76,7 +76,7 @@ function getUnassignedForDate(dateStr: string) {
       unassigned.push({
         courseDateId: cd.id,
         courseTitle: course.title,
-        courseId: course.id,
+        courseStatus: course.status,
         dayNumber: cd.day_number,
         pms: mockCoursePMs[course.id] ?? [],
       })
@@ -198,7 +198,7 @@ export default function Calendar() {
               {unassigned.length > 0 && (
                 <div className="mb-4 space-y-2">
                   {unassigned.map((u) => {
-                    const colors = courseColors[u.courseId] ?? { bg: 'bg-gray-50', text: 'text-gray-700', dot: 'bg-gray-500' }
+                    const colors = u.courseStatus ? statusColors[u.courseStatus] ?? { bg: 'bg-gray-50', text: 'text-gray-700', dot: 'bg-gray-500' } : { bg: 'bg-gray-50', text: 'text-gray-700', dot: 'bg-gray-500' }
                     return (
                       <div key={u.courseDateId} className="p-4 rounded-lg border border-amber-300 bg-amber-50">
                         <div className="flex items-center justify-between mb-1">
