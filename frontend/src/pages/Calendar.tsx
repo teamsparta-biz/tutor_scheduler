@@ -1,12 +1,18 @@
 import { useState, useMemo } from 'react'
-import { mockCourses, mockCourseDates, mockAssignments, mockInstructors, mockCoursePMs } from '../mocks/data'
+import { useQuery } from '@tanstack/react-query'
+import { getCalendar } from '../api/calendar'
+import type { CalendarEvent } from '../api/calendar'
+import { listInstructors } from '../api/instructors'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
-const statusColors: Record<string, { bg: string; text: string; dot: string }> = {
-  '진행중': { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
-  '예정': { bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
-  '완료': { bg: 'bg-gray-50', text: 'text-gray-500', dot: 'bg-gray-400' },
+// 교육일 단위로 묶은 데이터
+interface GroupedCourseDay {
+  courseId: string
+  courseTitle: string
+  mainTutors: { id: string; name: string; className: string }[]
+  techTutors: { id: string; name: string }[]
+  hasMainTutor: boolean // 주강사 배정 여부
 }
 
 function formatDateStr(d: Date): string {
@@ -39,61 +45,10 @@ function getCalendarDays(year: number, month: number): CalendarDay[] {
   return days
 }
 
-function getEventsForDate(dateStr: string, filterInstructor: string) {
-  const assignments = mockAssignments.filter((a) => {
-    if (a.date !== dateStr) return false
-    if (filterInstructor !== 'all' && a.instructor_id !== filterInstructor) return false
-    return true
-  })
-  return assignments.map((a) => {
-    const cd = mockCourseDates.find((c) => c.id === a.course_date_id)
-    const course = cd ? mockCourses.find((c) => c.id === cd.course_id) : null
-    const instructor = mockInstructors.find((i) => i.id === a.instructor_id)
-    const defaultColors = { bg: 'bg-gray-50', text: 'text-gray-700', dot: 'bg-gray-500' }
-    const colors = course?.status ? statusColors[course.status] ?? defaultColors : defaultColors
-    const pms = course ? mockCoursePMs[course.id] ?? [] : []
-    return {
-      id: a.id,
-      courseTitle: course?.title ?? '-',
-      instructorName: instructor?.name ?? '-',
-      className: a.class_name,
-      colors,
-      pms,
-    }
-  })
-}
-
-// 해당 날짜에 강사가 미배정인 교육 일정 조회 (완료 교육 제외)
-function getUnassignedForDate(dateStr: string) {
-  const courseDatesOnDay = mockCourseDates.filter((cd) => cd.date === dateStr)
-  const unassigned: { courseDateId: string; courseTitle: string; courseStatus: string | null; dayNumber: number; pms: string[] }[] = []
-
-  for (const cd of courseDatesOnDay) {
-    const course = mockCourses.find((c) => c.id === cd.course_id)
-    if (!course || course.status === '완료') continue
-    const hasAssignment = mockAssignments.some((a) => a.course_date_id === cd.id)
-    if (!hasAssignment) {
-      unassigned.push({
-        courseDateId: cd.id,
-        courseTitle: course.title,
-        courseStatus: course.status,
-        dayNumber: cd.day_number,
-        pms: mockCoursePMs[course.id] ?? [],
-      })
-    }
-  }
-  return unassigned
-}
-
-// 날짜에 이벤트가 있는지 (배정 or 미배정 포함)
-function hasAnyEvent(dateStr: string, filterInstructor: string) {
-  return getEventsForDate(dateStr, filterInstructor).length > 0 || getUnassignedForDate(dateStr).length > 0
-}
-
 export default function Calendar() {
   const [currentYear, setCurrentYear] = useState(2026)
   const [currentMonth, setCurrentMonth] = useState(1)
-  const [selectedDate, setSelectedDate] = useState<string | null>('2026-02-19')
+  const [selectedDate, setSelectedDate] = useState<string | null>(formatDateStr(new Date()))
   const [filterInstructor, setFilterInstructor] = useState('all')
 
   const days = useMemo(() => getCalendarDays(currentYear, currentMonth), [currentYear, currentMonth])
@@ -102,8 +57,79 @@ export default function Calendar() {
   const weeks: CalendarDay[][] = []
   for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7))
 
-  const events = selectedDate ? getEventsForDate(selectedDate, filterInstructor) : []
-  const unassigned = selectedDate ? getUnassignedForDate(selectedDate) : []
+  // 캘린더 범위 계산
+  const startDate = days[0].dateStr
+  const endDate = days[days.length - 1].dateStr
+
+  const { data: calendarData } = useQuery({
+    queryKey: ['calendar', startDate, endDate],
+    queryFn: () => getCalendar(startDate, endDate),
+  })
+
+  const { data: instructors = [] } = useQuery({
+    queryKey: ['instructors'],
+    queryFn: () => listInstructors(),
+  })
+
+  const events = calendarData?.events ?? []
+
+  // 날짜별 → 교육별 그룹화
+  const groupedByDate = useMemo(() => {
+    const dateMap = new Map<string, Map<string, CalendarEvent[]>>()
+    for (const ev of events) {
+      const dateStr = String(ev.date)
+      if (!dateMap.has(dateStr)) dateMap.set(dateStr, new Map())
+      const courseMap = dateMap.get(dateStr)!
+      const key = ev.course_id
+      if (!courseMap.has(key)) courseMap.set(key, [])
+      courseMap.get(key)!.push(ev)
+    }
+    // 교육 그룹으로 변환
+    const result = new Map<string, GroupedCourseDay[]>()
+    for (const [dateStr, courseMap] of dateMap) {
+      const groups: GroupedCourseDay[] = []
+      for (const [courseId, evts] of courseMap) {
+        const mainTutors: GroupedCourseDay['mainTutors'] = []
+        const techTutors: GroupedCourseDay['techTutors'] = []
+        for (const ev of evts) {
+          if (ev.class_name === '기술지원') {
+            techTutors.push({ id: ev.instructor_id, name: ev.instructor_name })
+          } else {
+            mainTutors.push({ id: ev.instructor_id, name: ev.instructor_name, className: ev.class_name ?? '' })
+          }
+        }
+        groups.push({
+          courseId,
+          courseTitle: evts[0].course_title,
+          mainTutors,
+          techTutors,
+          hasMainTutor: mainTutors.length > 0,
+        })
+      }
+      // 배정 미완료(주강사 없음)가 위로 오도록 정렬
+      groups.sort((a, b) => (a.hasMainTutor === b.hasMainTutor ? 0 : a.hasMainTutor ? 1 : -1))
+      result.set(dateStr, groups)
+    }
+    return result
+  }, [events])
+
+  function getGroupsForDate(dateStr: string): GroupedCourseDay[] {
+    const all = groupedByDate.get(dateStr) ?? []
+    if (filterInstructor === 'all') return all
+    return all.filter((g) =>
+      g.mainTutors.some((t) => t.id === filterInstructor) ||
+      g.techTutors.some((t) => t.id === filterInstructor)
+    )
+  }
+
+  // 날짜별 이벤트 존재 여부 + 미배정 존재 여부 (미니 캘린더 dot 표시용)
+  function dateHasEvents(dateStr: string): { has: boolean; hasUnassigned: boolean } {
+    const groups = getGroupsForDate(dateStr)
+    if (groups.length === 0) return { has: false, hasUnassigned: false }
+    return { has: true, hasUnassigned: groups.some((g) => !g.hasMainTutor) }
+  }
+
+  const selectedGroups = selectedDate ? getGroupsForDate(selectedDate) : []
 
   function prevMonth() {
     if (currentMonth === 0) { setCurrentYear(currentYear - 1); setCurrentMonth(11) }
@@ -124,7 +150,7 @@ export default function Calendar() {
           className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
         >
           <option value="all">전체 강사</option>
-          {mockInstructors.filter((i) => i.is_active).map((i) => (
+          {instructors.filter((i) => i.is_active).map((i) => (
             <option key={i.id} value={i.id}>{i.name}</option>
           ))}
         </select>
@@ -157,8 +183,7 @@ export default function Calendar() {
           {weeks.map((week, wi) => (
             <div key={wi} className="grid grid-cols-7">
               {week.map((day) => {
-                const has = hasAnyEvent(day.dateStr, filterInstructor)
-                const hasUnassigned = getUnassignedForDate(day.dateStr).length > 0
+                const { has, hasUnassigned } = dateHasEvents(day.dateStr)
                 const isSelected = selectedDate === day.dateStr
                 const dow = day.date.getDay()
                 return (
@@ -171,9 +196,7 @@ export default function Calendar() {
                   >
                     {day.date.getDate()}
                     {has && !isSelected && (
-                      <span className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${
-                        hasUnassigned ? 'bg-amber-500' : 'bg-blue-500'
-                      }`} />
+                      <span className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${hasUnassigned ? 'bg-orange-500' : 'bg-green-500'}`} />
                     )}
                   </button>
                 )
@@ -182,9 +205,9 @@ export default function Calendar() {
           ))}
 
           {/* 범례 */}
-          <div className="mt-3 pt-3 border-t border-gray-200 flex items-center gap-3 text-xs text-gray-400">
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> 배정 완료</span>
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> 미배정 있음</span>
+          <div className="mt-3 pt-3 border-t border-gray-200 flex flex-wrap items-center gap-3 text-xs text-gray-400">
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-500" /> 주강사 배정됨</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-orange-500" /> 배정 필요</span>
           </div>
         </div>
 
@@ -194,52 +217,61 @@ export default function Calendar() {
             <div>
               <h3 className="text-lg font-semibold text-gray-800 mb-4">{selectedDate} 일정</h3>
 
-              {/* 미배정 경고 */}
-              {unassigned.length > 0 && (
-                <div className="mb-4 space-y-2">
-                  {unassigned.map((u) => {
-                    const colors = u.courseStatus ? statusColors[u.courseStatus] ?? { bg: 'bg-gray-50', text: 'text-gray-700', dot: 'bg-gray-500' } : { bg: 'bg-gray-50', text: 'text-gray-700', dot: 'bg-gray-500' }
-                    return (
-                      <div key={u.courseDateId} className="p-4 rounded-lg border border-amber-300 bg-amber-50">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <span className={`w-2 h-2 rounded-full ${colors.dot}`} />
-                            <span className={`font-medium ${colors.text}`}>{u.courseTitle}</span>
-                            <span className="text-xs text-gray-500">Day {u.dayNumber}</span>
-                          </div>
-                          <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-xs font-medium">미배정</span>
-                        </div>
-                        {u.pms.length > 0 && (
-                          <div className="text-xs text-gray-500 mt-1">PM: {u.pms.join(', ')}</div>
+              {selectedGroups.length > 0 ? (
+                <div className="space-y-3">
+                  {selectedGroups.map((group) => (
+                    <div
+                      key={group.courseId}
+                      className={`p-4 rounded-lg border ${
+                        group.hasMainTutor
+                          ? 'border-green-200 bg-green-50/50'
+                          : 'border-orange-300 bg-orange-50/50'
+                      }`}
+                    >
+                      {/* 교육명 + 배정 상태 */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className={`w-2 h-2 rounded-full ${group.hasMainTutor ? 'bg-green-500' : 'bg-orange-500'}`} />
+                        <span className="font-medium text-gray-800">{group.courseTitle}</span>
+                        {!group.hasMainTutor && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">배정 필요</span>
                         )}
                       </div>
-                    )
-                  })}
-                </div>
-              )}
 
-              {/* 배정된 일정 */}
-              {events.length > 0 ? (
-                <div className="space-y-3">
-                  {events.map((ev) => (
-                    <div key={ev.id} className={`p-4 rounded-lg border border-gray-200 ${ev.colors.bg}`}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={`w-2 h-2 rounded-full ${ev.colors.dot}`} />
-                        <span className={`font-medium ${ev.colors.text}`}>{ev.courseTitle}</span>
+                      {/* 주강사 */}
+                      <div className="flex items-start gap-2 text-sm mb-1.5">
+                        <span className="text-gray-500 w-16 flex-shrink-0">주강사</span>
+                        {group.mainTutors.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {group.mainTutors.map((t) => (
+                              <span key={t.id} className="inline-flex items-center px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs font-medium">
+                                {t.name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-orange-600 font-medium text-xs px-2 py-0.5 rounded bg-orange-100">미배정</span>
+                        )}
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <span>강사: <strong className="text-gray-800">{ev.instructorName}</strong></span>
-                        <span className="px-2 py-0.5 bg-white/60 rounded text-xs">{ev.className}</span>
-                      </div>
-                      {ev.pms.length > 0 && (
-                        <div className="mt-2 text-xs text-gray-500">PM: {ev.pms.join(', ')}</div>
+
+                      {/* 기술 튜터 */}
+                      {group.techTutors.length > 0 && (
+                        <div className="flex items-start gap-2 text-sm">
+                          <span className="text-gray-500 w-16 flex-shrink-0">기술지원</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {group.techTutors.map((t) => (
+                              <span key={t.id} className="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs">
+                                {t.name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
                   ))}
                 </div>
-              ) : unassigned.length === 0 ? (
+              ) : (
                 <p className="text-gray-400 text-sm">이 날짜에 예정된 일정이 없습니다</p>
-              ) : null}
+              )}
             </div>
           ) : (
             <div className="flex items-center justify-center h-48 text-gray-400 text-sm">

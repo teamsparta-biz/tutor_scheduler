@@ -1,0 +1,2 @@
+class DuplicateAssignmentError(Exception):
+    pass

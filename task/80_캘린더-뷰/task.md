@@ -1,6 +1,6 @@
 ---
 created: 2026-02-22
-status: 대기
+status: 진행중
 ---
 
 # 캘린더 뷰
@@ -15,8 +15,8 @@ status: 대기
 
 ## 상세
 
+- [x] 캘린더 API 백엔드: GET /api/calendar?start_date=&end_date= — 캘린더 데이터 API
 - [ ] 캘린더 라이브러리 선택 및 설치 (FullCalendar, react-big-calendar 등)
-- [ ] GET /api/calendar?month=YYYY-MM 또는 /api/calendar?week=YYYY-W## — 캘린더 데이터 API
 - [ ] 월간 뷰: 날짜 셀에 교육명/강사명 표시, 색상으로 교육 구분
 - [ ] 주간 뷰: 요일별 상세 일정
 - [ ] 월/주 전환 토글
@@ -28,3 +28,13 @@ status: 대기
 
 - 70_강사-배정 완료 후 착수
 - react-big-calendar 또는 FullCalendar React 래퍼 사용 권장
+
+## 완료 기록 (백엔드 API)
+
+**완료일:** 2026-02-23
+
+- `schemas/calendar.py` — CalendarEvent, CalendarResponse 추가
+- `services/calendar_service.py` — 생성자 확장(4개 repo), get_calendar(start, end) — 다중 repo 조합, 메모리 매핑으로 N+1 회피
+- `dependencies.py` — get_calendar_service() (4개 repo 의존)
+- `routers/calendar.py` — GET /api/calendar?start_date=&end_date=
+- `tests/test_calendar.py` — 3개 테스트 (빈 캘린더, 배정 포함, 날짜 필터)

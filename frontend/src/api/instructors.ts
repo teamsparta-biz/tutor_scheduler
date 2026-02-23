@@ -1,1 +1,68 @@
-// task 30에서 구현
+import type { Instructor } from '../types'
+
+async function handleResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}))
+    throw new Error(body.detail ?? `HTTP ${response.status}`)
+  }
+  return response.json()
+}
+
+export async function listInstructors(isActive?: boolean): Promise<Instructor[]> {
+  const params = new URLSearchParams()
+  if (isActive !== undefined) params.set('is_active', String(isActive))
+  const query = params.toString()
+  const res = await fetch(`/api/instructors${query ? `?${query}` : ''}`)
+  return handleResponse<Instructor[]>(res)
+}
+
+export async function getInstructor(id: string): Promise<Instructor> {
+  const res = await fetch(`/api/instructors/${id}`)
+  return handleResponse<Instructor>(res)
+}
+
+export async function createInstructor(data: {
+  name: string
+  email?: string | null
+  phone?: string | null
+  specialty?: string | null
+  is_active?: boolean
+}): Promise<Instructor> {
+  const res = await fetch('/api/instructors', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  return handleResponse<Instructor>(res)
+}
+
+export async function updateInstructor(
+  id: string,
+  data: {
+    name?: string
+    email?: string | null
+    phone?: string | null
+    specialty?: string | null
+    is_active?: boolean
+  },
+): Promise<Instructor> {
+  const res = await fetch(`/api/instructors/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  return handleResponse<Instructor>(res)
+}
+
+export async function deleteInstructor(id: string): Promise<void> {
+  const res = await fetch(`/api/instructors/${id}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail ?? `HTTP ${res.status}`)
+  }
+}
+
+export async function getAvailableInstructors(date: string): Promise<Instructor[]> {
+  const res = await fetch(`/api/instructors/available?date=${date}`)
+  return handleResponse<Instructor[]>(res)
+}

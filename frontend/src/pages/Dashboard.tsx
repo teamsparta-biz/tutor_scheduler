@@ -1,39 +1,15 @@
-import { useState } from 'react'
-import { mockInstructors, mockCourses, mockAssignments, mockCourseDates, mockCoursePMs } from '../mocks/data'
-
-const activeInstructors = mockInstructors.filter((i) => i.is_active).length
-const thisMonthCourses = mockCourses.filter((c) => c.status !== '완료').length
-const thisWeekAssignments = mockAssignments.filter((a) => {
-  const d = new Date(a.date)
-  return d >= new Date('2026-02-16') && d <= new Date('2026-02-22')
-}).length
-
-function enrichAssignment(a: typeof mockAssignments[number]) {
-  const instructor = mockInstructors.find((i) => i.id === a.instructor_id)
-  const courseDate = mockCourseDates.find((cd) => cd.id === a.course_date_id)
-  const course = courseDate ? mockCourses.find((c) => c.id === courseDate.course_id) : null
-  const pms = course ? mockCoursePMs[course.id] ?? [] : []
-  return {
-    ...a,
-    instructorName: instructor?.name ?? '-',
-    courseTitle: course?.title ?? '-',
-    pms,
-  }
-}
-
-const todayAssignments = mockAssignments
-  .filter((a) => a.date === '2026-02-18')
-  .map(enrichAssignment)
-
-const weekAssignments = mockAssignments
-  .filter((a) => {
-    const d = new Date(a.date)
-    return d >= new Date('2026-02-16') && d <= new Date('2026-02-22')
-  })
-  .sort((a, b) => a.date.localeCompare(b.date))
-  .map(enrichAssignment)
+import { useState, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { listInstructors } from '../api/instructors'
+import { listCourses } from '../api/courses'
+import { getCalendar } from '../api/calendar'
+import type { CalendarEvent } from '../api/calendar'
 
 const WEEKDAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
+
+function formatDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 function StatCard({ title, value, sub, color }: { title: string; value: string; sub: string; color: string }) {
   const colorMap: Record<string, string> = {
@@ -51,25 +27,70 @@ function StatCard({ title, value, sub, color }: { title: string; value: string; 
   )
 }
 
-function ScheduleItem({ item }: { item: ReturnType<typeof enrichAssignment> }) {
-  const statusColors: Record<string, { bg: string; border: string; dot: string }> = {
-    '진행중': { bg: 'bg-blue-50', border: 'border-blue-200', dot: 'bg-blue-500' },
-    '예정': { bg: 'bg-green-50', border: 'border-green-200', dot: 'bg-green-500' },
-    '완료': { bg: 'bg-gray-50', border: 'border-gray-200', dot: 'bg-gray-400' },
-  }
-  const cd = mockCourseDates.find((c) => c.id === item.course_date_id)
-  const course = cd ? mockCourses.find((c) => c.id === cd.course_id) : null
-  const defaultColors = { bg: 'bg-gray-50', border: 'border-gray-200', dot: 'bg-gray-500' }
-  const colors = course?.status ? statusColors[course.status] ?? defaultColors : defaultColors
+interface GroupedSchedule {
+  courseId: string
+  courseTitle: string
+  mainTutors: string[]
+  techTutors: string[]
+  hasMainTutor: boolean
+}
 
+function groupEvents(events: CalendarEvent[]): GroupedSchedule[] {
+  const map = new Map<string, CalendarEvent[]>()
+  for (const ev of events) {
+    const arr = map.get(ev.course_id) ?? []
+    arr.push(ev)
+    map.set(ev.course_id, arr)
+  }
+  const groups: GroupedSchedule[] = []
+  for (const [courseId, evts] of map) {
+    const mainTutors: string[] = []
+    const techTutors: string[] = []
+    for (const ev of evts) {
+      if (ev.class_name === '기술지원') {
+        techTutors.push(ev.instructor_name)
+      } else {
+        mainTutors.push(ev.instructor_name)
+      }
+    }
+    groups.push({
+      courseId,
+      courseTitle: evts[0].course_title,
+      mainTutors,
+      techTutors,
+      hasMainTutor: mainTutors.length > 0,
+    })
+  }
+  groups.sort((a, b) => (a.hasMainTutor === b.hasMainTutor ? 0 : a.hasMainTutor ? 1 : -1))
+  return groups
+}
+
+function ScheduleCard({ group }: { group: GroupedSchedule }) {
   return (
-    <div className={`flex items-start gap-4 p-3 rounded-lg border ${colors.bg} ${colors.border}`}>
-      <div className="flex flex-col items-center pt-0.5">
-        <span className={`w-2.5 h-2.5 rounded-full ${colors.dot}`} />
+    <div className={`p-3 rounded-lg border ${
+      group.hasMainTutor ? 'bg-green-50/50 border-green-200' : 'bg-orange-50/50 border-orange-300'
+    }`}>
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className={`w-2 h-2 rounded-full ${group.hasMainTutor ? 'bg-green-500' : 'bg-orange-500'}`} />
+        <span className="font-medium text-gray-800 text-sm">{group.courseTitle}</span>
+        {!group.hasMainTutor && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">배정 필요</span>
+        )}
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-gray-800">{item.courseTitle}</p>
-        <p className="text-sm text-gray-600">{item.instructorName} — {item.class_name}</p>
+      <div className="flex items-center gap-2 text-xs ml-4">
+        <span className="text-gray-500">주강사</span>
+        {group.mainTutors.length > 0 ? (
+          <span className="text-blue-700">{group.mainTutors.join(', ')}</span>
+        ) : (
+          <span className="text-orange-600">미배정</span>
+        )}
+        {group.techTutors.length > 0 && (
+          <>
+            <span className="text-gray-300">|</span>
+            <span className="text-gray-500">기술지원</span>
+            <span className="text-gray-600">{group.techTutors.join(', ')}</span>
+          </>
+        )}
       </div>
     </div>
   )
@@ -77,7 +98,59 @@ function ScheduleItem({ item }: { item: ReturnType<typeof enrichAssignment> }) {
 
 export default function Dashboard() {
   const [tab, setTab] = useState<'today' | 'week'>('today')
-  const scheduleItems = tab === 'today' ? todayAssignments : weekAssignments
+
+  const today = new Date()
+  const todayStr = formatDateStr(today)
+
+  // 이번 주 월~일 계산
+  const dayOfWeek = today.getDay()
+  const monday = new Date(today)
+  monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  const weekStartStr = formatDateStr(monday)
+  const weekEndStr = formatDateStr(sunday)
+
+  const { data: instructors = [] } = useQuery({
+    queryKey: ['instructors'],
+    queryFn: () => listInstructors(),
+  })
+  const { data: courses = [] } = useQuery({
+    queryKey: ['courses'],
+    queryFn: listCourses,
+  })
+  const { data: calendarData } = useQuery({
+    queryKey: ['calendar', weekStartStr, weekEndStr],
+    queryFn: () => getCalendar(weekStartStr, weekEndStr),
+  })
+
+  const events = calendarData?.events ?? []
+  const todayEvents = events.filter((e) => String(e.date) === todayStr)
+  const weekEvents = [...events].sort((a, b) => String(a.date).localeCompare(String(b.date)))
+
+  const activeInstructors = instructors.filter((i) => i.is_active).length
+  const mainTutorCount = instructors.filter((i) => i.specialty !== 'Technical Tutor').length
+  const techTutorCount = instructors.filter((i) => i.specialty === 'Technical Tutor').length
+  const unassignedCourses = courses.filter((c) => c.assignment_status === '배정 미완료').length
+
+  const todayLabel = `${today.getMonth() + 1}/${today.getDate()}`
+  const weekLabel = `${monday.getMonth() + 1}/${monday.getDate()} ~ ${sunday.getMonth() + 1}/${sunday.getDate()}`
+
+  const todayGroups = useMemo(() => groupEvents(todayEvents), [todayEvents])
+
+  // 주간 이벤트를 날짜별 → 교육별 그룹화
+  const weekByDate = useMemo(() => {
+    const dateMap: Record<string, CalendarEvent[]> = {}
+    for (const item of weekEvents) {
+      const d = String(item.date);
+      (dateMap[d] ??= []).push(item)
+    }
+    const result: Record<string, GroupedSchedule[]> = {}
+    for (const [date, evts] of Object.entries(dateMap)) {
+      result[date] = groupEvents(evts)
+    }
+    return result
+  }, [weekEvents])
 
   return (
     <div>
@@ -86,10 +159,10 @@ export default function Dashboard() {
       <div className="flex gap-6">
         {/* 왼쪽: 통계 카드 */}
         <div className="w-64 flex-shrink-0 flex flex-col gap-4">
-          <StatCard title="활성 강사" value={`${activeInstructors}명`} sub={`전체 ${mockInstructors.length}명`} color="blue" />
-          <StatCard title="이번 달 교육" value={`${thisMonthCourses}개`} sub="진행중 1, 예정 1" color="green" />
-          <StatCard title="이번 주 배정" value={`${thisWeekAssignments}건`} sub="2/16 ~ 2/22" color="purple" />
-          <StatCard title="Notion 동기화" value="2시간 전" sub="마지막 동기화" color="amber" />
+          <StatCard title="활성 강사" value={`${activeInstructors}명`} sub={`주강사 ${mainTutorCount} / 기술 튜터 ${techTutorCount}`} color="blue" />
+          <StatCard title="배정 미완료" value={`${unassignedCourses}개`} sub={`전체 ${courses.length}개`} color="green" />
+          <StatCard title="이번 주 교육" value={`${Object.values(weekByDate).reduce((s, g) => s + g.length, 0)}건`} sub={weekLabel} color="purple" />
+          <StatCard title="오늘 교육" value={`${todayGroups.length}건`} sub={todayStr} color="amber" />
         </div>
 
         {/* 오른쪽: 일정 타임라인 */}
@@ -103,7 +176,7 @@ export default function Dashboard() {
                   tab === 'today' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
-                오늘 (2/18)
+                오늘 ({todayLabel})
               </button>
               <button
                 onClick={() => setTab('week')}
@@ -116,29 +189,24 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {tab === 'week' && scheduleItems.length > 0 ? (
+          {tab === 'week' && Object.keys(weekByDate).length > 0 ? (
             <div className="space-y-4">
-              {Object.entries(
-                scheduleItems.reduce<Record<string, typeof scheduleItems>>((acc, item) => {
-                  (acc[item.date] ??= []).push(item)
-                  return acc
-                }, {})
-              ).map(([date, items]) => {
+              {Object.entries(weekByDate).map(([date, groups]) => {
                 const d = new Date(date + 'T00:00:00')
                 const dayLabel = `${d.getMonth() + 1}/${d.getDate()} (${WEEKDAY_NAMES[d.getDay()]})`
                 return (
                   <div key={date}>
                     <p className="text-sm font-medium text-gray-500 mb-2">{dayLabel}</p>
                     <div className="space-y-2">
-                      {items.map((item) => <ScheduleItem key={item.id} item={item} />)}
+                      {groups.map((g) => <ScheduleCard key={g.courseId} group={g} />)}
                     </div>
                   </div>
                 )
               })}
             </div>
-          ) : tab === 'today' && scheduleItems.length > 0 ? (
+          ) : tab === 'today' && todayGroups.length > 0 ? (
             <div className="space-y-3">
-              {scheduleItems.map((item) => <ScheduleItem key={item.id} item={item} />)}
+              {todayGroups.map((g) => <ScheduleCard key={g.courseId} group={g} />)}
             </div>
           ) : (
             <p className="text-gray-400 text-sm py-8 text-center">예정된 일정이 없습니다</p>

@@ -1,0 +1,44 @@
+from fastapi import APIRouter, Depends
+
+from dependencies import get_availability_service
+from schemas.availability import AvailabilityCreate, AvailabilityResponse
+from services.availability_service import AvailabilityService
+
+router = APIRouter(prefix="/availability", tags=["availability"])
+
+
+@router.get("", response_model=list[AvailabilityResponse])
+async def list_availability(
+    instructor_id: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    service: AvailabilityService = Depends(get_availability_service),
+):
+    if instructor_id:
+        items = await service.list_by_instructor(instructor_id)
+        # 날짜 범위 필터 적용
+        if start_date and end_date:
+            items = [
+                a for a in items
+                if start_date <= str(a["date"]) <= end_date
+            ]
+        return items
+    elif start_date and end_date:
+        return await service.list_by_date_range(start_date, end_date)
+    return []
+
+
+@router.post("", response_model=AvailabilityResponse, status_code=201)
+async def create_availability(
+    data: AvailabilityCreate,
+    service: AvailabilityService = Depends(get_availability_service),
+):
+    return await service.create(data)
+
+
+@router.delete("/{availability_id}", status_code=204)
+async def delete_availability(
+    availability_id: str,
+    service: AvailabilityService = Depends(get_availability_service),
+):
+    await service.delete(availability_id)

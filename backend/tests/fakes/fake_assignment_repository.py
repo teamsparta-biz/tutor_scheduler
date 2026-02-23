@@ -1,10 +1,7 @@
 from uuid import uuid4
 
 from repositories.assignment_repository import AssignmentRepository
-
-
-class DuplicateAssignmentError(Exception):
-    pass
+from exceptions import DuplicateAssignmentError
 
 
 class FakeAssignmentRepository(AssignmentRepository):
@@ -13,7 +10,11 @@ class FakeAssignmentRepository(AssignmentRepository):
         self._unique_index: set[tuple[str, str]] = set()  # (instructor_id, date)
 
     async def list_assignments(self, filters: dict | None = None) -> list[dict]:
-        return list(self._store.values())
+        items = list(self._store.values())
+        if filters:
+            for key, value in filters.items():
+                items = [i for i in items if str(i.get(key)) == str(value)]
+        return items
 
     async def create_assignment(self, data: dict) -> dict:
         key = (data["instructor_id"], str(data["date"]))

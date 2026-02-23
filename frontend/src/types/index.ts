@@ -16,6 +16,13 @@ export interface Course {
   title: string
   status: string | null
   target: string | null
+  students: number | null
+  lecture_start: string | null
+  lecture_end: string | null
+  workbook_full_url: string | null
+  assignment_status: string | null
+  total_dates: number | null
+  assigned_dates: number | null
   synced_at: string
   created_at: string
   updated_at: string
@@ -26,6 +33,9 @@ export interface CourseDate {
   course_id: string
   date: string
   day_number: number
+  place: string | null
+  start_time: number | null
+  end_time: number | null
   created_at: string
   updated_at: string
 }

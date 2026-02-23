@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>강사 페이지 목업</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif; background: #f3f4f6; }
+  .tab-active { background: #2563eb; color: white; }
+  .tab-inactive { color: #4b5563; }
+  .tab-inactive:hover { background: #f3f4f6; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- 상단 헤더 -->
+<header class="bg-white border-b border-gray-200 sticky top-0 z-40">
+  <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+      </div>
+      <span class="font-semibold text-gray-800">강사 포털</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="text-sm text-gray-500">이재준 강사님</span>
+      <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm font-medium text-gray-600">이</div>
+    </div>
+  </div>
+</header>
+
+<!-- 탭 네비게이션 -->
+<div class="bg-white border-b border-gray-200">
+  <div class="max-w-5xl mx-auto px-4">
+    <div class="flex gap-1 py-2">
+      <button id="tab-schedule" onclick="switchTab('schedule')" class="px-4 py-2 text-sm rounded-lg font-medium tab-active">내 일정</button>
+      <button id="tab-courses" onclick="switchTab('courses')" class="px-4 py-2 text-sm rounded-lg font-medium tab-inactive">배정 교육</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== -->
+<!-- 탭 1: 내 일정 -->
+<!-- ==================== -->
+<div id="panel-schedule" class="max-w-5xl mx-auto px-4 py-6">
+
+  <!-- 안내 메시지 -->
+  <div class="mb-5 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
+    <svg class="w-5 h-5 text-blue-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <div class="text-sm text-blue-800">
+      <p class="font-medium mb-1">일정을 등록해주세요</p>
+      <p class="text-blue-600">날짜를 클릭하여 가능/불가 여부를 표시해주세요. 교육이 배정된 날짜는 수정할 수 없습니다.</p>
+    </div>
+  </div>
+
+  <!-- 범례 + 월 이동 -->
+  <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center gap-3">
+      <button onclick="prevMonth()" class="p-1.5 rounded-lg hover:bg-gray-200 text-gray-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <h3 id="month-label" class="text-lg font-semibold text-gray-800 min-w-32 text-center">2026년 3월</h3>
+      <button onclick="nextMonth()" class="p-1.5 rounded-lg hover:bg-gray-200 text-gray-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+    <div class="flex items-center gap-3 text-xs text-gray-500">
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-blue-100 border border-blue-300"></span> 배정됨</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-green-100 border border-green-300"></span> 가능</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-red-100 border border-red-300"></span> 불가</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-gray-50 border border-gray-300"></span> 미정</span>
+    </div>
+  </div>
+
+  <!-- 캘린더 -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <!-- 요일 헤더 -->
+    <div class="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
+      <div class="px-2 py-2.5 text-center text-sm font-medium text-red-500">일</div>
+      <div class="px-2 py-2.5 text-center text-sm font-medium text-gray-600">월</div>
+      <div class="px-2 py-2.5 text-center text-sm font-medium text-gray-600">화</div>
+      <div class="px-2 py-2.5 text-center text-sm font-medium text-gray-600">수</div>
+      <div class="px-2 py-2.5 text-center text-sm font-medium text-gray-600">목</div>
+      <div class="px-2 py-2.5 text-center text-sm font-medium text-gray-600">금</div>
+      <div class="px-2 py-2.5 text-center text-sm font-medium text-blue-500">토</div>
+    </div>
+
+    <div id="calendar-grid"></div>
+  </div>
+
+  <!-- 이번 달 요약 -->
+  <div class="mt-5 grid grid-cols-4 gap-3">
+    <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+      <div class="text-2xl font-bold text-blue-600" id="stat-assigned">3</div>
+      <div class="text-xs text-gray-500 mt-1">배정됨</div>
+    </div>
+    <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+      <div class="text-2xl font-bold text-green-600" id="stat-available">8</div>
+      <div class="text-xs text-gray-500 mt-1">가능</div>
+    </div>
+    <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+      <div class="text-2xl font-bold text-red-600" id="stat-unavail">4</div>
+      <div class="text-xs text-gray-500 mt-1">불가</div>
+    </div>
+    <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+      <div class="text-2xl font-bold text-gray-400" id="stat-pending">7</div>
+      <div class="text-xs text-gray-500 mt-1">미정</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== -->
+<!-- 탭 2: 배정 교육 -->
+<!-- ==================== -->
+<div id="panel-courses" class="max-w-5xl mx-auto px-4 py-6 hidden">
+
+  <!-- 필터 -->
+  <div class="flex items-center gap-3 mb-5">
+    <div class="flex gap-1 border border-gray-300 rounded-lg p-0.5">
+      <button onclick="filterCourses('all')" id="cf-all" class="px-3 py-1.5 text-sm rounded-md tab-active">전체 (4)</button>
+      <button onclick="filterCourses('upcoming')" id="cf-upcoming" class="px-3 py-1.5 text-sm rounded-md tab-inactive">예정 (2)</button>
+      <button onclick="filterCourses('done')" id="cf-done" class="px-3 py-1.5 text-sm rounded-md tab-inactive">완료 (2)</button>
+    </div>
+  </div>
+
+  <!-- 교육 카드 목록 -->
+  <div class="space-y-4" id="course-list">
+
+    <!-- 교육 카드 1: 예정 -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden course-card" data-status="upcoming">
+      <div class="border-l-4 border-blue-500 p-5">
+        <div class="flex items-start justify-between mb-3">
+          <div>
+            <h4 class="font-semibold text-gray-800">[한국은행] 신입행원 생성형 AI 활용한 데이터 분석</h4>
+            <p class="text-sm text-gray-500 mt-0.5">한국은행 본관 3층 교육장</p>
+          </div>
+          <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">예정</span>
+        </div>
+
+        <!-- 교육 정보 -->
+        <div class="grid grid-cols-3 gap-4 mb-4 p-3 bg-gray-50 rounded-lg text-sm">
+          <div>
+            <span class="text-gray-500">기간</span>
+            <p class="font-medium text-gray-800 mt-0.5">2026.03.10 ~ 03.12</p>
+          </div>
+          <div>
+            <span class="text-gray-500">교육 일수</span>
+            <p class="font-medium text-gray-800 mt-0.5">3일</p>
+          </div>
+          <div>
+            <span class="text-gray-500">수강인원</span>
+            <p class="font-medium text-gray-800 mt-0.5">25명</p>
+          </div>
+        </div>
+
+        <!-- 일차별 일정 -->
+        <div class="space-y-2">
+          <h5 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">일차별 일정</h5>
+          <div class="divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden">
+            <div class="flex items-center gap-3 px-4 py-2.5 bg-white">
+              <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Day 1</span>
+              <span class="text-sm text-gray-700">2026.03.10 (화)</span>
+              <span class="text-xs text-gray-400 ml-auto">주강사</span>
+            </div>
+            <div class="flex items-center gap-3 px-4 py-2.5 bg-white">
+              <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Day 2</span>
+              <span class="text-sm text-gray-700">2026.03.11 (수)</span>
+              <span class="text-xs text-gray-400 ml-auto">주강사</span>
+            </div>
+            <div class="flex items-center gap-3 px-4 py-2.5 bg-white">
+              <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Day 3</span>
+              <span class="text-sm text-gray-700">2026.03.12 (목)</span>
+              <span class="text-xs text-gray-400 ml-auto">주강사</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 교육 카드 2: 예정 -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden course-card" data-status="upcoming">
+      <div class="border-l-4 border-blue-500 p-5">
+        <div class="flex items-start justify-between mb-3">
+          <div>
+            <h4 class="font-semibold text-gray-800">[LG생활건강] 온라인 Micro-Learning 교육</h4>
+            <p class="text-sm text-gray-500 mt-0.5">온라인 (Zoom)</p>
+          </div>
+          <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">예정</span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 mb-4 p-3 bg-gray-50 rounded-lg text-sm">
+          <div>
+            <span class="text-gray-500">기간</span>
+            <p class="font-medium text-gray-800 mt-0.5">2026.03.27 ~ 07.10</p>
+          </div>
+          <div>
+            <span class="text-gray-500">교육 일수</span>
+            <p class="font-medium text-gray-800 mt-0.5">10일</p>
+          </div>
+          <div>
+            <span class="text-gray-500">수강인원</span>
+            <p class="font-medium text-gray-800 mt-0.5">40명</p>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <h5 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">일차별 일정</h5>
+            <button class="text-xs text-blue-600 hover:text-blue-800" onclick="this.closest('.space-y-2').querySelector('.schedule-expand').classList.toggle('hidden')">전체 보기 ▼</button>
+          </div>
+          <div class="divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden">
+            <div class="flex items-center gap-3 px-4 py-2.5 bg-white">
+              <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Day 3</span>
+              <span class="text-sm text-gray-700">2026.03.27 (금)</span>
+              <span class="text-xs text-gray-400 ml-auto">주강사</span>
+            </div>
+            <div class="flex items-center gap-3 px-4 py-2.5 bg-white">
+              <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Day 4</span>
+              <span class="text-sm text-gray-700">2026.04.09 (목)</span>
+              <span class="text-xs text-gray-400 ml-auto">주강사</span>
+            </div>
+          </div>
+          <div class="schedule-expand hidden divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden mt-1">
+            <div class="flex items-center gap-3 px-4 py-2.5 bg-white">
+              <span class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">Day 5</span>
+              <span class="text-sm text-gray-700">2026.04.24 (금)</span>
+              <span class="text-xs text-gray-400 ml-auto">주강사</span>
+            </div>
+            <div class="flex items-center gap-3 px-4 py-2.5 bg-white">
+              <span class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">Day 6</span>
+              <span class="text-sm text-gray-700">2026.05.15 (금)</span>
+              <span class="text-xs text-gray-400 ml-auto">주강사</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 교육 카드 3: 완료 -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden course-card" data-status="done">
+      <div class="border-l-4 border-gray-300 p-5">
+        <div class="flex items-start justify-between mb-3">
+          <div>
+            <h4 class="font-semibold text-gray-600">[선진] 신입사원 AI 활용 최종발표 PPT 제작 워크숍</h4>
+            <p class="text-sm text-gray-400 mt-0.5">선진 본사 5층 대강당</p>
+          </div>
+          <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">완료</span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 p-3 bg-gray-50 rounded-lg text-sm">
+          <div>
+            <span class="text-gray-400">기간</span>
+            <p class="font-medium text-gray-600 mt-0.5">2026.02.02</p>
+          </div>
+          <div>
+            <span class="text-gray-400">교육 일수</span>
+            <p class="font-medium text-gray-600 mt-0.5">1일</p>
+          </div>
+          <div>
+            <span class="text-gray-400">수강인원</span>
+            <p class="font-medium text-gray-600 mt-0.5">30명</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 교육 카드 4: 완료 -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden course-card" data-status="done">
+      <div class="border-l-4 border-gray-300 p-5">
+        <div class="flex items-start justify-between mb-3">
+          <div>
+            <h4 class="font-semibold text-gray-600">[카카오엔터테인먼트] 콘텐츠 생성 AI 교육</h4>
+            <p class="text-sm text-gray-400 mt-0.5">판교 카카오 오피스</p>
+          </div>
+          <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">완료</span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 p-3 bg-gray-50 rounded-lg text-sm">
+          <div>
+            <span class="text-gray-400">기간</span>
+            <p class="font-medium text-gray-600 mt-0.5">2026.01.15 ~ 01.16</p>
+          </div>
+          <div>
+            <span class="text-gray-400">교육 일수</span>
+            <p class="font-medium text-gray-600 mt-0.5">2일</p>
+          </div>
+          <div>
+            <span class="text-gray-400">수강인원</span>
+            <p class="font-medium text-gray-600 mt-0.5">20명</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 탭 전환 ──
+function switchTab(tab) {
+  document.getElementById('panel-schedule').classList.toggle('hidden', tab !== 'schedule')
+  document.getElementById('panel-courses').classList.toggle('hidden', tab !== 'courses')
+  document.getElementById('tab-schedule').className = `px-4 py-2 text-sm rounded-lg font-medium ${tab === 'schedule' ? 'tab-active' : 'tab-inactive'}`
+  document.getElementById('tab-courses').className = `px-4 py-2 text-sm rounded-lg font-medium ${tab === 'courses' ? 'tab-active' : 'tab-inactive'}`
+}
+
+// ── 교육 필터 ──
+function filterCourses(filter) {
+  document.querySelectorAll('[id^="cf-"]').forEach(b => {
+    b.className = `px-3 py-1.5 text-sm rounded-md ${b.id === 'cf-' + filter ? 'tab-active' : 'tab-inactive'}`
+  })
+  document.querySelectorAll('.course-card').forEach(card => {
+    if (filter === 'all') card.classList.remove('hidden')
+    else card.classList.toggle('hidden', card.dataset.status !== filter)
+  })
+}
+
+// ── 캘린더 ──
+let currentYear = 2026, currentMonth = 2 // March (0-indexed)
+
+// 더미 데이터: 배정된 교육
+const assignedDates = {
+  '2026-03-10': { course: '[한국은행] 신입행원 AI 교육', role: '주강사' },
+  '2026-03-11': { course: '[한국은행] 신입행원 AI 교육', role: '주강사' },
+  '2026-03-12': { course: '[한국은행] 신입행원 AI 교육', role: '주강사' },
+  '2026-03-27': { course: '[LG생활건강] Micro-Learning', role: '주강사' },
+}
+
+// 강사 가용성 (토글 가능)
+const availability = {}
+
+function fmt(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
+
+function getDays(y, m) {
+  const first = new Date(y, m, 1), last = new Date(y, m+1, 0)
+  const days = []
+  for (let i = first.getDay()-1; i >= 0; i--) {
+    const d = new Date(y, m, -i); days.push({ date: d, str: fmt(d), cur: false })
+  }
+  for (let i = 1; i <= last.getDate(); i++) {
+    const d = new Date(y, m, i); days.push({ date: d, str: fmt(d), cur: true })
+  }
+  while (days.length % 7) {
+    const d = new Date(y, m+1, days.length - last.getDate() - first.getDay() + 1)
+    days.push({ date: d, str: fmt(d), cur: false })
+  }
+  return days
+}
+
+const wdNames = ['일','월','화','수','목','금','토']
+
+function renderCalendar() {
+  const days = getDays(currentYear, currentMonth)
+  document.getElementById('month-label').textContent = `${currentYear}년 ${currentMonth+1}월`
+
+  let html = ''
+  let stats = { assigned: 0, available: 0, unavailable: 0, pending: 0 }
+
+  for (let wi = 0; wi < days.length; wi += 7) {
+    html += '<div class="grid grid-cols-7 border-b border-gray-100 last:border-b-0">'
+    for (let di = 0; di < 7; di++) {
+      const day = days[wi + di]
+      const dow = day.date.getDay()
+      const assigned = assignedDates[day.str]
+      const avail = availability[day.str] // 'available' | 'unavailable' | undefined
+
+      // 통계 (현재 월만)
+      if (day.cur) {
+        if (assigned) stats.assigned++
+        else if (avail === 'available') stats.available++
+        else if (avail === 'unavailable') stats.unavailable++
+        else {
+          // 주말은 미정 카운트에서 제외
+          if (dow !== 0 && dow !== 6) stats.pending++
+        }
+      }
+
+      let bg = 'hover:bg-gray-50'
+      let badge = ''
+      let cursor = 'cursor-pointer'
+
+      if (assigned) {
+        bg = 'bg-blue-50'
+        cursor = 'cursor-default'
+        badge = `<div class="mt-1"><span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200 whitespace-nowrap">배정됨</span></div>
+                 <div class="mt-0.5 text-[9px] text-blue-600 truncate" title="${assigned.course}">${assigned.course.slice(0,10)}</div>`
+      } else if (avail === 'available') {
+        bg = 'bg-green-50'
+        badge = '<div class="mt-1"><span class="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 border border-green-200">가능</span></div>'
+      } else if (avail === 'unavailable') {
+        bg = 'bg-red-50'
+        badge = '<div class="mt-1"><span class="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 border border-red-200">불가</span></div>'
+      }
+
+      const opacity = day.cur ? '' : 'opacity-30'
+      const dateColor = dow === 0 ? 'text-red-500' : dow === 6 ? 'text-blue-500' : 'text-gray-700'
+
+      html += `<button onclick="${day.cur && !assigned ? `toggleDay('${day.str}')` : ''}" class="min-h-[72px] p-2 border-r border-gray-100 last:border-r-0 text-left transition ${cursor} ${opacity} ${bg}">
+        <div class="text-sm font-medium ${dateColor}">${day.date.getDate()}</div>
+        ${badge}
+      </button>`
+    }
+    html += '</div>'
+  }
+
+  document.getElementById('calendar-grid').innerHTML = html
+  document.getElementById('stat-assigned').textContent = stats.assigned
+  document.getElementById('stat-available').textContent = stats.available
+  document.getElementById('stat-unavail').textContent = stats.unavailable
+  document.getElementById('stat-pending').textContent = stats.pending
+}
+
+function toggleDay(dateStr) {
+  const cur = availability[dateStr]
+  if (!cur) {
+    availability[dateStr] = 'available'
+  } else if (cur === 'available') {
+    availability[dateStr] = 'unavailable'
+  } else {
+    delete availability[dateStr]
+  }
+  renderCalendar()
+}
+
+function prevMonth() {
+  if (currentMonth === 0) { currentYear--; currentMonth = 11 } else currentMonth--
+  renderCalendar()
+}
+function nextMonth() {
+  if (currentMonth === 11) { currentYear++; currentMonth = 0 } else currentMonth++
+  renderCalendar()
+}
+
+// 초기 렌더링
+renderCalendar()
+</script>
+
+</body>
+</html>

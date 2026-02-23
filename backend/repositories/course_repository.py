@@ -13,3 +13,23 @@ class CourseRepository(ABC):
     async def get_course(self, course_id: str) -> dict | None:
         """교육 상세 조회"""
         ...
+
+    @abstractmethod
+    async def create_course(self, data: dict) -> dict:
+        """교육 생성"""
+        ...
+
+    @abstractmethod
+    async def update_course(self, course_id: str, data: dict) -> dict:
+        """교육 수정"""
+        ...
+
+    @abstractmethod
+    async def delete_course(self, course_id: str) -> bool:
+        """교육 삭제"""
+        ...
+
+    @abstractmethod
+    async def upsert_course(self, data: dict) -> dict:
+        """교육 upsert (notion_page_id 기준)"""
+        ...

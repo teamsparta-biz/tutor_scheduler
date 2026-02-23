@@ -1,6 +1,6 @@
 ---
 created: 2026-02-22
-status: 대기
+status: 진행중
 ---
 
 # 교육 일정 관리
@@ -15,7 +15,7 @@ status: 대기
 
 ## 상세
 
-- [ ] 61_교육-API: FastAPI CRUD 엔드포인트
+- [x] 61_교육-API: FastAPI CRUD 엔드포인트
 - [ ] 62_교육-프론트엔드: React 교육 관리 화면
 
 ## 참고

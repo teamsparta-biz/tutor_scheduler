@@ -9,16 +9,39 @@ class SupabaseInstructorRepository(InstructorRepository):
         self._client = client
 
     async def list_instructors(self, is_active: bool | None = None) -> list[dict]:
-        raise NotImplementedError("task 30에서 구현")
+        query = self._client.table("instructors").select("*")
+        if is_active is not None:
+            query = query.eq("is_active", is_active)
+        result = query.execute()
+        return result.data
 
     async def get_instructor(self, instructor_id: str) -> dict | None:
-        raise NotImplementedError("task 30에서 구현")
+        result = (
+            self._client.table("instructors")
+            .select("*")
+            .eq("id", instructor_id)
+            .execute()
+        )
+        return result.data[0] if result.data else None
 
     async def create_instructor(self, data: dict) -> dict:
-        raise NotImplementedError("task 30에서 구현")
+        result = self._client.table("instructors").insert(data).execute()
+        return result.data[0]
 
     async def update_instructor(self, instructor_id: str, data: dict) -> dict:
-        raise NotImplementedError("task 30에서 구현")
+        result = (
+            self._client.table("instructors")
+            .update(data)
+            .eq("id", instructor_id)
+            .execute()
+        )
+        return result.data[0]
 
     async def delete_instructor(self, instructor_id: str) -> bool:
-        raise NotImplementedError("task 30에서 구현")
+        result = (
+            self._client.table("instructors")
+            .delete()
+            .eq("id", instructor_id)
+            .execute()
+        )
+        return len(result.data) > 0
