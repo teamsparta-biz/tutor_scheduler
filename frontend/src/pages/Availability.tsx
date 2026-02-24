@@ -5,39 +5,16 @@ import { listCourses, getCourse } from '../api/courses'
 import { getCalendar } from '../api/calendar'
 import { listAvailability } from '../api/availability'
 import type { Instructor, Course } from '../types'
+import { formatDateStr, getCalendarDays } from '../utils/date'
+import { isTechTutor } from '../utils/instructor'
 
 type RoleFilter = 'all' | 'main' | 'tech'
-const isTechTutor = (inst: Instructor) => inst.specialty === 'Technical Tutor'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
-
-function formatDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
 
 function shortDate(dateStr: string): string {
   const [, m, d] = dateStr.split('-')
   return `${parseInt(m)}/${parseInt(d)}`
-}
-
-function getCalendarDays(year: number, month: number) {
-  const firstDay = new Date(year, month, 1)
-  const lastDay = new Date(year, month + 1, 0)
-  const startDow = firstDay.getDay()
-  const days: { date: Date; dateStr: string; isCurrentMonth: boolean }[] = []
-  for (let i = startDow - 1; i >= 0; i--) {
-    const d = new Date(year, month, -i)
-    days.push({ date: d, dateStr: formatDateStr(d), isCurrentMonth: false })
-  }
-  for (let i = 1; i <= lastDay.getDate(); i++) {
-    const d = new Date(year, month, i)
-    days.push({ date: d, dateStr: formatDateStr(d), isCurrentMonth: true })
-  }
-  while (days.length % 7 !== 0) {
-    const d = new Date(year, month + 1, days.length - lastDay.getDate() - startDow + 1)
-    days.push({ date: d, dateStr: formatDateStr(d), isCurrentMonth: false })
-  }
-  return days
 }
 
 // 검색 가능한 교육 선택 콤보박스

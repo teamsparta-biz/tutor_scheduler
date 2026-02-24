@@ -4,12 +4,9 @@ import { listInstructors } from '../api/instructors'
 import { listCourses } from '../api/courses'
 import { getCalendar } from '../api/calendar'
 import type { CalendarEvent } from '../api/calendar'
+import { formatDateStr } from '../utils/date'
 
 const WEEKDAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
-
-function formatDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
 
 function StatCard({ title, value, sub, color }: { title: string; value: string; sub: string; color: string }) {
   const colorMap: Record<string, string> = {
