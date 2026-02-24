@@ -4,16 +4,26 @@ from dependencies import (
     get_instructor_service,
     get_assignment_service,
     get_instructor_course_service,
+    get_notion_sync_service,
     get_current_user,
     require_admin,
 )
 from schemas.auth import UserProfile
-from schemas.instructor import InstructorCreate, InstructorUpdate, InstructorResponse
+from schemas.instructor import InstructorCreate, InstructorUpdate, InstructorResponse, InstructorSyncResultResponse
 from services.instructor_service import InstructorService
 from services.assignment_service import AssignmentService
 from services.instructor_course_service import InstructorCourseService
+from services.notion_sync_service import NotionSyncService
 
 router = APIRouter(prefix="/instructors", tags=["instructors"])
+
+
+@router.post("/sync", response_model=InstructorSyncResultResponse)
+async def sync_instructors(
+    _admin: UserProfile = Depends(require_admin),
+    service: NotionSyncService = Depends(get_notion_sync_service),
+):
+    return await service.sync_tutors()
 
 
 @router.get("/available", response_model=list[InstructorResponse])

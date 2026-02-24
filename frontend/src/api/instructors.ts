@@ -1,6 +1,15 @@
 import type { Instructor } from '../types'
 import { fetchWithAuth, handleResponse } from './client'
 
+export interface InstructorSyncResult {
+  tutors: number
+}
+
+export async function syncInstructors(): Promise<InstructorSyncResult> {
+  const res = await fetchWithAuth('/api/instructors/sync', { method: 'POST' })
+  return handleResponse<InstructorSyncResult>(res)
+}
+
 export async function listInstructors(isActive?: boolean): Promise<Instructor[]> {
   const params = new URLSearchParams()
   if (isActive !== undefined) params.set('is_active', String(isActive))

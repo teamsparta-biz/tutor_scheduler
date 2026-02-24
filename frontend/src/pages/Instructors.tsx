@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { listInstructors, createInstructor, updateInstructor, deleteInstructor } from '../api/instructors'
+import { listInstructors, createInstructor, updateInstructor, deleteInstructor, syncInstructors } from '../api/instructors'
 import { getCalendar } from '../api/calendar'
 import { listAvailability } from '../api/availability'
 import Pagination from '../components/Pagination'
@@ -199,12 +199,13 @@ function InstructorModal({
   const isEdit = instructor !== null
   const nameRef = useRef<HTMLInputElement>(null)
   const emailRef = useRef<HTMLInputElement>(null)
+  const authEmailRef = useRef<HTMLInputElement>(null)
   const phoneRef = useRef<HTMLInputElement>(null)
   const activeRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const defaults = instructor ?? { name: '', email: '', phone: '', specialty: '', is_active: true }
+  const defaults = instructor ?? { name: '', email: '', auth_email: '', phone: '', specialty: '', is_active: true }
 
   async function handleSubmit() {
     const name = nameRef.current?.value.trim() ?? ''
@@ -216,6 +217,7 @@ function InstructorModal({
       const data = {
         name,
         email: emailRef.current?.value.trim() || null,
+        auth_email: authEmailRef.current?.value.trim() || null,
         phone: phoneRef.current?.value.trim() || null,
         is_active: activeRef.current?.checked ?? true,
       }
@@ -248,8 +250,13 @@ function InstructorModal({
             <input ref={nameRef} type="text" defaultValue={defaults.name} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="강사 이름" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">이메일</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">연락처 이메일</label>
             <input ref={emailRef} type="email" defaultValue={defaults.email ?? ''} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="email@example.com" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">로그인 이메일</label>
+            <input ref={authEmailRef} type="email" defaultValue={defaults.auth_email ?? ''} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Google 로그인에 사용하는 이메일" />
+            <p className="text-xs text-gray-400 mt-1">연락처와 다른 이메일로 로그인할 경우 입력</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">연락처</label>
@@ -275,7 +282,7 @@ export default function Instructors() {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all')
-  const [filterRole, setFilterRole] = useState<'all' | 'main' | 'tech'>('all')
+  const [filterRole, setFilterRole] = useState<'all' | 'main' | 'tech'>('main')
   const [sortKey, setSortKey] = useState<'name' | 'role'>('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [page, setPage] = useState(1)
@@ -292,6 +299,17 @@ export default function Instructors() {
   const deleteMutation = useMutation({
     mutationFn: deleteInstructor,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['instructors'] }),
+  })
+
+  const syncMutation = useMutation({
+    mutationFn: syncInstructors,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['instructors'] })
+      alert(`강사 동기화 완료: ${result.tutors}명`)
+    },
+    onError: (err) => {
+      alert(`동기화 실패: ${err instanceof Error ? err.message : '알 수 없는 오류'}`)
+    },
   })
 
   function handleSaved() {
@@ -356,12 +374,18 @@ export default function Instructors() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-gray-800">강사 관리</h2>
-        <button
-          onClick={() => { setEditTarget(null); setModalOpen(true) }}
-          className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 cursor-pointer"
-        >
-          + 강사 등록
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => syncMutation.mutate()}
+            disabled={syncMutation.isPending}
+            className="px-4 py-2 text-sm text-white bg-green-600 rounded-lg hover:bg-green-700 cursor-pointer flex items-center gap-2 disabled:opacity-50"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {syncMutation.isPending ? '동기화 중...' : '강사 동기화'}
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow p-5">
@@ -374,7 +398,7 @@ export default function Instructors() {
             className="flex-1 max-w-sm border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <div className="flex gap-1 border border-gray-300 rounded-lg p-0.5">
-            {([['all', `전체 (${instructors.length})`], ['main', `주강사 (${mainCount})`], ['tech', `기술 튜터 (${techCount})`]] as const).map(([f, label]) => (
+            {([['main', `주강사 (${mainCount})`], ['tech', `기술 튜터 (${techCount})`], ['all', `전체 (${instructors.length})`]] as const).map(([f, label]) => (
               <button
                 key={f}
                 onClick={() => { setFilterRole(f as 'all' | 'main' | 'tech'); setPage(1) }}

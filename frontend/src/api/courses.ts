@@ -5,8 +5,7 @@ export interface CourseDetail extends Course {
   dates: CourseDate[]
 }
 
-export interface SyncResult {
-  tutors: number
+export interface CourseSyncResult {
   courses: number
   schedules: number
   assignments: number
@@ -22,7 +21,7 @@ export async function getCourse(id: string): Promise<CourseDetail> {
   return handleResponse<CourseDetail>(res)
 }
 
-export async function syncCourses(): Promise<SyncResult> {
+export async function syncCourses(): Promise<CourseSyncResult> {
   const res = await fetchWithAuth('/api/courses/sync', { method: 'POST' })
-  return handleResponse<SyncResult>(res)
+  return handleResponse<CourseSyncResult>(res)
 }

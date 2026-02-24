@@ -25,7 +25,15 @@ class AuthService:
         instructor_id = None
 
         if role == "instructor":
-            instructor = await self._profile_repo.find_instructor_by_email(email)
+            # 1) auth_email로 검색
+            instructor = await self._profile_repo.find_instructor_by_auth_email(email)
+            if not instructor:
+                # 2) email(연락처)로 검색 → 매칭되면 auth_email 자동 저장
+                instructor = await self._profile_repo.find_instructor_by_email(email)
+                if instructor:
+                    await self._profile_repo.update_instructor_auth_email(
+                        instructor["id"], email
+                    )
             if not instructor:
                 raise AuthorizationError(
                     "접근 권한이 없습니다. instructors 테이블에 등록된 이메일만 사용할 수 있습니다."

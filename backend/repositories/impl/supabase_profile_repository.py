@@ -33,3 +33,20 @@ class SupabaseProfileRepository(ProfileRepository):
             .execute()
         )
         return result.data if result else None
+
+    async def find_instructor_by_auth_email(self, email: str) -> dict | None:
+        result = (
+            self._client.table("instructors")
+            .select("*")
+            .eq("auth_email", email)
+            .maybe_single()
+            .execute()
+        )
+        return result.data if result else None
+
+    async def update_instructor_auth_email(
+        self, instructor_id: str, auth_email: str
+    ) -> None:
+        self._client.table("instructors").update(
+            {"auth_email": auth_email}
+        ).eq("id", instructor_id).execute()

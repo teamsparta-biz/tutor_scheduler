@@ -15,3 +15,13 @@ class ProfileRepository(ABC):
     @abstractmethod
     async def find_instructor_by_email(self, email: str) -> dict | None:
         ...
+
+    @abstractmethod
+    async def find_instructor_by_auth_email(self, email: str) -> dict | None:
+        ...
+
+    @abstractmethod
+    async def update_instructor_auth_email(
+        self, instructor_id: str, auth_email: str
+    ) -> None:
+        ...

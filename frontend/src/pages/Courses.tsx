@@ -58,21 +58,35 @@ export default function Courses() {
 
   const managerOptions = useMemo(() => {
     const set = new Set<string>()
-    for (const c of courses) if (c.manager) set.add(c.manager)
+    for (const c of courses) {
+      if (c.manager) {
+        for (const name of c.manager.split(', ')) {
+          const trimmed = name.trim()
+          if (trimmed) set.add(trimmed)
+        }
+      }
+    }
     return [...set].sort((a, b) => a.localeCompare(b, 'ko'))
   }, [courses])
 
   const salesRepOptions = useMemo(() => {
     const set = new Set<string>()
-    for (const c of courses) if (c.sales_rep) set.add(c.sales_rep)
+    for (const c of courses) {
+      if (c.sales_rep) {
+        for (const name of c.sales_rep.split(', ')) {
+          const trimmed = name.trim()
+          if (trimmed) set.add(trimmed)
+        }
+      }
+    }
     return [...set].sort((a, b) => a.localeCompare(b, 'ko'))
   }, [courses])
 
   const sortedFiltered = useMemo(() => {
     let result = courses.filter((c: Course) => {
       if (statusFilter !== 'all' && c.assignment_status !== statusFilter) return false
-      if (managerFilter !== 'all' && c.manager !== managerFilter) return false
-      if (salesRepFilter !== 'all' && c.sales_rep !== salesRepFilter) return false
+      if (managerFilter !== 'all' && !(c.manager && c.manager.includes(managerFilter))) return false
+      if (salesRepFilter !== 'all' && !(c.sales_rep && c.sales_rep.includes(salesRepFilter))) return false
       if (searchQuery) {
         return c.title.toLowerCase().includes(searchQuery.toLowerCase())
       }

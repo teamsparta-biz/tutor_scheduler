@@ -83,13 +83,27 @@ export default function Calendar() {
 
   const managerOptions = useMemo(() => {
     const set = new Set<string>()
-    for (const ev of events) if (ev.manager) set.add(ev.manager)
+    for (const ev of events) {
+      if (ev.manager) {
+        for (const name of ev.manager.split(', ')) {
+          const trimmed = name.trim()
+          if (trimmed) set.add(trimmed)
+        }
+      }
+    }
     return [...set].sort((a, b) => a.localeCompare(b, 'ko'))
   }, [events])
 
   const salesRepOptions = useMemo(() => {
     const set = new Set<string>()
-    for (const ev of events) if (ev.sales_rep) set.add(ev.sales_rep)
+    for (const ev of events) {
+      if (ev.sales_rep) {
+        for (const name of ev.sales_rep.split(', ')) {
+          const trimmed = name.trim()
+          if (trimmed) set.add(trimmed)
+        }
+      }
+    }
     return [...set].sort((a, b) => a.localeCompare(b, 'ko'))
   }, [events])
 
@@ -148,10 +162,10 @@ export default function Calendar() {
       )
     }
     if (filterManager !== 'all') {
-      result = result.filter((g) => g.manager === filterManager)
+      result = result.filter((g) => g.manager != null && g.manager.includes(filterManager))
     }
     if (filterSalesRep !== 'all') {
-      result = result.filter((g) => g.salesRep === filterSalesRep)
+      result = result.filter((g) => g.salesRep != null && g.salesRep.includes(filterSalesRep))
     }
     return result
   }

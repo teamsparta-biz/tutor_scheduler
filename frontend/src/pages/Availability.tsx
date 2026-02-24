@@ -19,9 +19,9 @@ function RoleFilterButtons({ instructors, value, onChange }: { instructors: Inst
   const mainCount = instructors.filter((i) => !isTechTutor(i)).length
   const techCount = instructors.filter((i) => isTechTutor(i)).length
   const options: [RoleFilter, string][] = [
-    ['all', `전체 (${instructors.length})`],
     ['main', `주강사 (${mainCount})`],
     ['tech', `기술 튜터 (${techCount})`],
+    ['all', `전체 (${instructors.length})`],
   ]
   return (
     <div className="flex gap-1 border border-gray-300 rounded-lg p-0.5">
@@ -46,7 +46,7 @@ function formatDateStr(d: Date): string {
 
 export default function Availability() {
   const [selectedDate, setSelectedDate] = useState(formatDateStr(new Date()))
-  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('main')
 
   const { data: instructors = [] } = useQuery({
     queryKey: ['instructors'],

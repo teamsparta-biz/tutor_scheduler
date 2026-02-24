@@ -7,7 +7,7 @@ from schemas.course import (
     CourseUpdate,
     CourseResponse,
     CourseDetailResponse,
-    FullSyncResultResponse,
+    CourseSyncResultResponse,
 )
 from services.course_service import CourseService
 from services.notion_sync_service import NotionSyncService
@@ -15,12 +15,12 @@ from services.notion_sync_service import NotionSyncService
 router = APIRouter(prefix="/courses", tags=["courses"])
 
 
-@router.post("/sync", response_model=FullSyncResultResponse)
+@router.post("/sync", response_model=CourseSyncResultResponse)
 async def sync_courses(
     _admin: UserProfile = Depends(require_admin),
     service: NotionSyncService = Depends(get_notion_sync_service),
 ):
-    return await service.sync_all()
+    return await service.sync_courses_and_schedules()
 
 
 @router.get("", response_model=list[CourseResponse])

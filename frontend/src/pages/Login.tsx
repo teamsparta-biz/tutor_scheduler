@@ -23,9 +23,16 @@ export default function Login() {
             </svg>
           </div>
           <h2 className="text-xl font-bold text-gray-800 mb-2">접근 권한 없음</h2>
-          <p className="text-gray-500 mb-6">
-            등록되지 않은 계정입니다. 관리자에게 문의하세요.
+          <p className="text-gray-600 mb-2">
+            현재 로그인한 계정이 강사로 등록되어 있지 않습니다.
           </p>
+          <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+            <p className="text-sm text-gray-700 font-medium mb-2">다음 방법으로 해결할 수 있습니다:</p>
+            <ol className="text-sm text-gray-600 list-decimal list-inside space-y-1">
+              <li>담당 매니저에게 이 계정의 <strong>인증을 요청</strong>하세요.</li>
+              <li>또는 등록된 다른 이메일로 다시 로그인하세요.</li>
+            </ol>
+          </div>
           <button
             onClick={logout}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition cursor-pointer"
