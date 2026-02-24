@@ -65,19 +65,36 @@ class NotionSyncService:
 
     # ── 강의 동기화 ──
 
+    # 동기화 완료로 간주하는 상태 (더 이상 변하지 않는 교육)
+    _FINISHED_STATES = {"tax_invoice", "lecture_stop"}
+
     async def _sync_courses(self) -> int:
-        pages = await self._client.query_database(self._settings.NOTION_DB_LECTURE)
+        # 기존 DB 과목을 course_map에 미리 로드 (일정 매핑용)
+        existing = await self._course_repo.list_courses()
+        for c in existing:
+            if c.get("notion_page_id"):
+                self._course_map[c["notion_page_id"]] = c["id"]
+
+        # 완료되지 않은 교육만 Notion에서 가져오기
+        notion_filter = {
+            "and": [
+                {"property": "lecture_state", "status": {"does_not_equal": "tax_invoice"}},
+                {"property": "lecture_state", "status": {"does_not_equal": "lecture_stop"}},
+            ]
+        }
+        pages = await self._client.query_database(
+            self._settings.NOTION_DB_LECTURE, filters=notion_filter,
+        )
         count = 0
         for page in pages:
             parsed = _parse_lecture(page)
             if not parsed["title"]:
                 continue
-            # schedule_ids는 DB 컬럼이 아니므로 제거
             parsed.pop("schedule_ids", None)
             course = await self._course_repo.upsert_course(parsed)
             self._course_map[parsed["notion_page_id"]] = course["id"]
             count += 1
-        print(f"[sync] courses: {count}")
+        print(f"[sync] courses: {count} (active only, {len(existing)} total in DB)")
         return count
 
     # ── 일정 동기화 (+배정 자동 생성) ──
