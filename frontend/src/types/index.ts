@@ -6,9 +6,8 @@ export interface Instructor {
   phone: string | null
   specialty: string | null
   is_active: boolean
-  profile_id: string | null
-  created_at: string
-  updated_at: string
+  created_at?: string
+  updated_at?: string
 }
 
 export interface Course {
@@ -28,9 +27,9 @@ export interface Course {
   manager_email: string | null
   sales_rep: string | null
   sales_rep_email: string | null
-  synced_at: string
-  created_at: string
-  updated_at: string
+  synced_at?: string
+  created_at?: string
+  updated_at?: string
 }
 
 export interface CourseDate {
@@ -41,8 +40,8 @@ export interface CourseDate {
   place: string | null
   start_time: number | null
   end_time: number | null
-  created_at: string
-  updated_at: string
+  created_at?: string
+  updated_at?: string
 }
 
 export interface Assignment {
@@ -52,8 +51,8 @@ export interface Assignment {
   date: string
   class_name: string | null
   created_by: string | null
-  created_at: string
-  updated_at: string
+  created_at?: string
+  updated_at?: string
 }
 
 export interface InstructorAvailability {
@@ -61,6 +60,6 @@ export interface InstructorAvailability {
   instructor_id: string
   date: string
   status: 'available' | 'unavailable' | 'pending'
-  created_at: string
-  updated_at: string
+  created_at?: string
+  updated_at?: string
 }
