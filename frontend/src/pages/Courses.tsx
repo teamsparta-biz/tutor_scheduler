@@ -257,11 +257,21 @@ export default function Courses() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">담당 매니저</span>
-                  <span className="text-gray-700 text-xs">{selectedCourse.manager ?? '-'}</span>
+                  <span className="text-gray-700 text-xs">
+                    {selectedCourse.manager ?? '-'}
+                    {selectedCourse.manager_email && (
+                      <a href={`mailto:${selectedCourse.manager_email}`} className="ml-1 text-blue-500 hover:underline">{selectedCourse.manager_email}</a>
+                    )}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">영업 담당</span>
-                  <span className="text-gray-700 text-xs">{selectedCourse.sales_rep ?? '-'}</span>
+                  <span className="text-gray-700 text-xs">
+                    {selectedCourse.sales_rep ?? '-'}
+                    {selectedCourse.sales_rep_email && (
+                      <a href={`mailto:${selectedCourse.sales_rep_email}`} className="ml-1 text-blue-500 hover:underline">{selectedCourse.sales_rep_email}</a>
+                    )}
+                  </span>
                 </div>
                 {selectedCourse.notion_page_id && (
                   <div className="flex items-center gap-2 mt-1">

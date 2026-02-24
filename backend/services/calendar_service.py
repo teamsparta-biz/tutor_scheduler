@@ -56,7 +56,9 @@ class CalendarService:
                 "notion_page_id": course.get("notion_page_id", ""),
                 "workbook_full_url": course.get("workbook_full_url"),
                 "manager": course.get("manager"),
+                "manager_email": course.get("manager_email"),
                 "sales_rep": course.get("sales_rep"),
+                "sales_rep_email": course.get("sales_rep_email"),
             })
 
         return {"events": events}

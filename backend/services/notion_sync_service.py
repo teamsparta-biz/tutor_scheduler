@@ -306,6 +306,22 @@ def _extract_relation_ids(props: dict, key: str) -> list[str]:
     return []
 
 
+def _extract_people(props: dict, key: str) -> list[dict]:
+    """Notion people 타입에서 name, email을 추출한다."""
+    prop = props.get(key)
+    if not prop or prop.get("type") != "people":
+        return []
+    results = []
+    for person in prop.get("people", []):
+        name = person.get("name", "")
+        email = ""
+        if person.get("person"):
+            email = person["person"].get("email", "")
+        if name:
+            results.append({"name": name, "email": email})
+    return results
+
+
 def _extract_rollup_texts(props: dict, key: str) -> list[str]:
     prop = props.get(key)
     if not prop or prop.get("type") != "rollup":
@@ -378,8 +394,8 @@ def _parse_lecture(page: dict) -> dict:
     schedule_ids = _extract_relation_ids(props, "lecture_schedules")
     target_names = _extract_rollup_texts(props, "target_name")
     workbook_full_url = _extract_rollup_url(props, "workbook_full_URL")
-    manager_names = _extract_rollup_texts(props, "lecture_PIC")
-    sales_rep_names = _extract_rollup_texts(props, "sales_PIC")
+    manager_people = _extract_people(props, "lecture_PIC")
+    sales_rep_people = _extract_people(props, "sales_PIC")
 
     return {
         "notion_page_id": page["id"],
@@ -390,8 +406,10 @@ def _parse_lecture(page: dict) -> dict:
         "lecture_end": lecture_end or None,
         "students": students,
         "workbook_full_url": workbook_full_url or None,
-        "manager": ", ".join(manager_names) if manager_names else None,
-        "sales_rep": ", ".join(sales_rep_names) if sales_rep_names else None,
+        "manager": ", ".join(p["name"] for p in manager_people) if manager_people else None,
+        "manager_email": manager_people[0]["email"] if manager_people and manager_people[0]["email"] else None,
+        "sales_rep": ", ".join(p["name"] for p in sales_rep_people) if sales_rep_people else None,
+        "sales_rep_email": sales_rep_people[0]["email"] if sales_rep_people and sales_rep_people[0]["email"] else None,
         "schedule_ids": schedule_ids,
     }
 

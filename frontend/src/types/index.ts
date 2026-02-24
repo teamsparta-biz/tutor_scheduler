@@ -25,7 +25,9 @@ export interface Course {
   total_dates: number | null
   assigned_dates: number | null
   manager: string | null
+  manager_email: string | null
   sales_rep: string | null
+  sales_rep_email: string | null
   synced_at: string
   created_at: string
   updated_at: string

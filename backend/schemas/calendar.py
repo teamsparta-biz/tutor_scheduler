@@ -21,7 +21,9 @@ class CalendarEvent(BaseModel):
     notion_page_id: str = ""
     workbook_full_url: str | None = None
     manager: str | None = None
+    manager_email: str | None = None
     sales_rep: str | None = None
+    sales_rep_email: str | None = None
 
 
 class CalendarResponse(BaseModel):

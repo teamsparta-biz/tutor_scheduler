@@ -13,7 +13,9 @@ export interface CalendarEvent {
   notion_page_id: string
   workbook_full_url: string | null
   manager: string | null
+  manager_email: string | null
   sales_rep: string | null
+  sales_rep_email: string | null
 }
 
 export interface CalendarResponse {

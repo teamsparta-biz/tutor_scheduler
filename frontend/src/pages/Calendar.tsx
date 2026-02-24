@@ -16,7 +16,9 @@ interface GroupedCourseDay {
   notionPageId: string
   workbookUrl: string | null
   manager: string | null
+  managerEmail: string | null
   salesRep: string | null
+  salesRepEmail: string | null
 }
 
 function formatDateStr(d: Date): string {
@@ -125,7 +127,9 @@ export default function Calendar() {
           notionPageId: evts[0].notion_page_id,
           workbookUrl: evts[0].workbook_full_url,
           manager: evts[0].manager,
+          managerEmail: evts[0].manager_email,
           salesRep: evts[0].sales_rep,
+          salesRepEmail: evts[0].sales_rep_email,
         })
       }
       // 배정 미완료(주강사 없음)가 위로 오도록 정렬
@@ -311,8 +315,16 @@ export default function Calendar() {
                       {/* 담당자 */}
                       {(group.manager || group.salesRep) && (
                         <div className="flex items-center gap-3 text-xs text-gray-500 mb-2">
-                          {group.manager && <span>매니저: <span className="text-gray-700">{group.manager}</span></span>}
-                          {group.salesRep && <span>영업: <span className="text-gray-700">{group.salesRep}</span></span>}
+                          {group.manager && (
+                            <span>매니저: <span className="text-gray-700">{group.manager}</span>
+                              {group.managerEmail && <a href={`mailto:${group.managerEmail}`} className="ml-1 text-blue-500 hover:underline">{group.managerEmail}</a>}
+                            </span>
+                          )}
+                          {group.salesRep && (
+                            <span>영업: <span className="text-gray-700">{group.salesRep}</span>
+                              {group.salesRepEmail && <a href={`mailto:${group.salesRepEmail}`} className="ml-1 text-blue-500 hover:underline">{group.salesRepEmail}</a>}
+                            </span>
+                          )}
                         </div>
                       )}
 

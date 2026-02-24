@@ -13,7 +13,9 @@ class CourseBase(BaseModel):
     lecture_end: str | None = None
     workbook_full_url: str | None = None
     manager: str | None = None
+    manager_email: str | None = None
     sales_rep: str | None = None
+    sales_rep_email: str | None = None
 
 
 class CourseCreate(CourseBase):
