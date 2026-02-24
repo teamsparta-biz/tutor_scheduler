@@ -26,3 +26,7 @@ desktop.ini
 .idea/
 *.swp
 *.swo
+
+# Project management (Claude sessions)
+context/
+task/
