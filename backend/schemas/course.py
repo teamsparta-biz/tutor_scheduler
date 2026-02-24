@@ -12,6 +12,8 @@ class CourseBase(BaseModel):
     lecture_start: str | None = None
     lecture_end: str | None = None
     workbook_full_url: str | None = None
+    manager: str | None = None
+    sales_rep: str | None = None
 
 
 class CourseCreate(CourseBase):
@@ -57,6 +59,12 @@ class SyncResultResponse(BaseModel):
 
 class FullSyncResultResponse(BaseModel):
     tutors: int
+    courses: int
+    schedules: int
+    assignments: int
+
+
+class CourseSyncResultResponse(BaseModel):
     courses: int
     schedules: int
     assignments: int

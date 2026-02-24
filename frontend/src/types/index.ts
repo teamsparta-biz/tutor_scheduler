@@ -2,6 +2,7 @@ export interface Instructor {
   id: string
   name: string
   email: string | null
+  auth_email: string | null
   phone: string | null
   specialty: string | null
   is_active: boolean
@@ -23,6 +24,8 @@ export interface Course {
   assignment_status: string | null
   total_dates: number | null
   assigned_dates: number | null
+  manager: string | null
+  sales_rep: string | null
   synced_at: string
   created_at: string
   updated_at: string

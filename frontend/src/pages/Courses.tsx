@@ -14,6 +14,8 @@ const assignmentStatusColors: Record<string, string> = {
 export default function Courses() {
   const queryClient = useQueryClient()
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [managerFilter, setManagerFilter] = useState<string>('all')
+  const [salesRepFilter, setSalesRepFilter] = useState<string>('all')
   const [sortKey, setSortKey] = useState<'date' | 'title' | 'assignment'>('date')
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
@@ -54,9 +56,23 @@ export default function Courses() {
     },
   })
 
+  const managerOptions = useMemo(() => {
+    const set = new Set<string>()
+    for (const c of courses) if (c.manager) set.add(c.manager)
+    return [...set].sort((a, b) => a.localeCompare(b, 'ko'))
+  }, [courses])
+
+  const salesRepOptions = useMemo(() => {
+    const set = new Set<string>()
+    for (const c of courses) if (c.sales_rep) set.add(c.sales_rep)
+    return [...set].sort((a, b) => a.localeCompare(b, 'ko'))
+  }, [courses])
+
   const sortedFiltered = useMemo(() => {
     let result = courses.filter((c: Course) => {
       if (statusFilter !== 'all' && c.assignment_status !== statusFilter) return false
+      if (managerFilter !== 'all' && c.manager !== managerFilter) return false
+      if (salesRepFilter !== 'all' && c.sales_rep !== salesRepFilter) return false
       if (searchQuery) {
         return c.title.toLowerCase().includes(searchQuery.toLowerCase())
       }
@@ -83,7 +99,7 @@ export default function Courses() {
     })
 
     return result
-  }, [courses, statusFilter, searchQuery, sortKey])
+  }, [courses, statusFilter, managerFilter, salesRepFilter, searchQuery, sortKey])
 
   const totalPages = Math.ceil(sortedFiltered.length / pageSize)
   const paged = sortedFiltered.slice((page - 1) * pageSize, page * pageSize)
@@ -139,6 +155,22 @@ export default function Courses() {
                 </button>
               ))}
             </div>
+            <select
+              value={managerFilter}
+              onChange={(e) => { setManagerFilter(e.target.value); setPage(1) }}
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">매니저 전체</option>
+              {managerOptions.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+            <select
+              value={salesRepFilter}
+              onChange={(e) => { setSalesRepFilter(e.target.value); setPage(1) }}
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">영업 전체</option>
+              {salesRepOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
             <span className="text-sm text-gray-500">정렬:</span>
             <select
               value={sortKey}
@@ -163,7 +195,8 @@ export default function Courses() {
                   <tr className="border-b border-gray-200 text-left text-gray-500">
                     <th className="pb-3 font-medium">교육명</th>
                     <th className="pb-3 font-medium">교육 기간</th>
-                    <th className="pb-3 font-medium">대상</th>
+                    <th className="pb-3 font-medium">매니저</th>
+                    <th className="pb-3 font-medium">영업</th>
                     <th className="pb-3 font-medium">상태</th>
                     <th className="pb-3 font-medium">배정</th>
                   </tr>
@@ -186,7 +219,8 @@ export default function Courses() {
                       >
                         <td className="py-3 font-medium text-gray-800">{course.title}</td>
                         <td className="py-3 text-gray-500 text-xs whitespace-nowrap">{periodLabel}</td>
-                        <td className="py-3 text-gray-600">{course.target ?? '-'}</td>
+                        <td className="py-3 text-gray-600 text-xs">{course.manager ?? '-'}</td>
+                        <td className="py-3 text-gray-600 text-xs">{course.sales_rep ?? '-'}</td>
                         <td className="py-3">
                           <span className={`px-2 py-0.5 rounded text-xs ${assignmentStatusColors[course.assignment_status ?? ''] ?? 'bg-gray-100 text-gray-500'}`}>
                             {course.assignment_status ?? '-'}
@@ -214,12 +248,20 @@ export default function Courses() {
               <h3 className="text-lg font-semibold text-gray-800 mb-1">{selectedCourse.title}</h3>
               <p className="text-sm text-gray-500 mb-4">{selectedCourse.target}</p>
 
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg text-sm">
-                <div className="flex justify-between mb-1">
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg text-sm space-y-1">
+                <div className="flex justify-between">
                   <span className="text-gray-500">배정 상태</span>
                   <span className={`px-2 py-0.5 rounded text-xs ${assignmentStatusColors[selectedCourse.assignment_status ?? ''] ?? 'bg-gray-100 text-gray-500'}`}>
                     {selectedCourse.assignment_status ?? '-'}
                   </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">담당 매니저</span>
+                  <span className="text-gray-700 text-xs">{selectedCourse.manager ?? '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">영업 담당</span>
+                  <span className="text-gray-700 text-xs">{selectedCourse.sales_rep ?? '-'}</span>
                 </div>
                 {selectedCourse.notion_page_id && (
                   <div className="flex items-center gap-2 mt-1">

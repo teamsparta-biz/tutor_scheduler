@@ -15,6 +15,8 @@ interface GroupedCourseDay {
   hasMainTutor: boolean // 주강사 배정 여부
   notionPageId: string
   workbookUrl: string | null
+  manager: string | null
+  salesRep: string | null
 }
 
 function formatDateStr(d: Date): string {
@@ -52,6 +54,8 @@ export default function Calendar() {
   const [currentMonth, setCurrentMonth] = useState(1)
   const [selectedDate, setSelectedDate] = useState<string | null>(formatDateStr(new Date()))
   const [filterInstructor, setFilterInstructor] = useState('all')
+  const [filterManager, setFilterManager] = useState('all')
+  const [filterSalesRep, setFilterSalesRep] = useState('all')
 
   const days = useMemo(() => getCalendarDays(currentYear, currentMonth), [currentYear, currentMonth])
   const monthLabel = `${currentYear}년 ${currentMonth + 1}월`
@@ -74,6 +78,18 @@ export default function Calendar() {
   })
 
   const events = calendarData?.events ?? []
+
+  const managerOptions = useMemo(() => {
+    const set = new Set<string>()
+    for (const ev of events) if (ev.manager) set.add(ev.manager)
+    return [...set].sort((a, b) => a.localeCompare(b, 'ko'))
+  }, [events])
+
+  const salesRepOptions = useMemo(() => {
+    const set = new Set<string>()
+    for (const ev of events) if (ev.sales_rep) set.add(ev.sales_rep)
+    return [...set].sort((a, b) => a.localeCompare(b, 'ko'))
+  }, [events])
 
   // 날짜별 → 교육별 그룹화
   const groupedByDate = useMemo(() => {
@@ -108,6 +124,8 @@ export default function Calendar() {
           hasMainTutor: mainTutors.length > 0,
           notionPageId: evts[0].notion_page_id,
           workbookUrl: evts[0].workbook_full_url,
+          manager: evts[0].manager,
+          salesRep: evts[0].sales_rep,
         })
       }
       // 배정 미완료(주강사 없음)가 위로 오도록 정렬
@@ -118,12 +136,20 @@ export default function Calendar() {
   }, [events])
 
   function getGroupsForDate(dateStr: string): GroupedCourseDay[] {
-    const all = groupedByDate.get(dateStr) ?? []
-    if (filterInstructor === 'all') return all
-    return all.filter((g) =>
-      g.mainTutors.some((t) => t.id === filterInstructor) ||
-      g.techTutors.some((t) => t.id === filterInstructor)
-    )
+    let result = groupedByDate.get(dateStr) ?? []
+    if (filterInstructor !== 'all') {
+      result = result.filter((g) =>
+        g.mainTutors.some((t) => t.id === filterInstructor) ||
+        g.techTutors.some((t) => t.id === filterInstructor)
+      )
+    }
+    if (filterManager !== 'all') {
+      result = result.filter((g) => g.manager === filterManager)
+    }
+    if (filterSalesRep !== 'all') {
+      result = result.filter((g) => g.salesRep === filterSalesRep)
+    }
+    return result
   }
 
   // 날짜별 이벤트 존재 여부 + 미배정 존재 여부 (미니 캘린더 dot 표시용)
@@ -148,16 +174,34 @@ export default function Calendar() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-gray-800">캘린더</h2>
-        <select
-          value={filterInstructor}
-          onChange={(e) => setFilterInstructor(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
-        >
-          <option value="all">전체 강사</option>
-          {instructors.filter((i) => i.is_active).map((i) => (
-            <option key={i.id} value={i.id}>{i.name}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2">
+          <select
+            value={filterManager}
+            onChange={(e) => setFilterManager(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
+          >
+            <option value="all">매니저 전체</option>
+            {managerOptions.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <select
+            value={filterSalesRep}
+            onChange={(e) => setFilterSalesRep(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
+          >
+            <option value="all">영업 전체</option>
+            {salesRepOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select
+            value={filterInstructor}
+            onChange={(e) => setFilterInstructor(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
+          >
+            <option value="all">전체 강사</option>
+            {instructors.filter((i) => i.is_active).map((i) => (
+              <option key={i.id} value={i.id}>{i.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="flex items-center gap-3 mb-4">
@@ -263,6 +307,14 @@ export default function Calendar() {
                           </a>
                         )}
                       </div>
+
+                      {/* 담당자 */}
+                      {(group.manager || group.salesRep) && (
+                        <div className="flex items-center gap-3 text-xs text-gray-500 mb-2">
+                          {group.manager && <span>매니저: <span className="text-gray-700">{group.manager}</span></span>}
+                          {group.salesRep && <span>영업: <span className="text-gray-700">{group.salesRep}</span></span>}
+                        </div>
+                      )}
 
                       {/* 주강사 */}
                       <div className="flex items-start gap-2 text-sm mb-1.5">

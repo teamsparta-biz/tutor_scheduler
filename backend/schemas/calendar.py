@@ -20,6 +20,8 @@ class CalendarEvent(BaseModel):
     assignment_id: str
     notion_page_id: str = ""
     workbook_full_url: str | None = None
+    manager: str | None = None
+    sales_rep: str | None = None
 
 
 class CalendarResponse(BaseModel):

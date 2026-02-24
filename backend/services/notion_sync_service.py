@@ -34,19 +34,41 @@ class NotionSyncService:
 
     async def sync_all(self) -> dict:
         """전체 동기화: 튜터 → 강의 → 일정(+배정) 순서."""
+        tutor_result = await self.sync_tutors()
+        course_result = await self.sync_courses_and_schedules()
+
+        result = {
+            "tutors": tutor_result["tutors"],
+            "courses": course_result["courses"],
+            "schedules": course_result["schedules"],
+            "assignments": course_result["assignments"],
+        }
+        print(f"[sync] {result}")
+        return result
+
+    async def sync_tutors(self) -> dict:
+        """강사만 동기화."""
         tutor_count = await self._sync_tutors()
+        return {"tutors": tutor_count}
+
+    async def sync_courses_and_schedules(self) -> dict:
+        """강의 + 일정 + 배정 동기화. 기존 DB에서 tutor_map을 미리 로드."""
+        await self._preload_tutor_map()
         course_count = await self._sync_courses()
         schedule_count, assignment_count = await self._sync_schedules()
         await self._compute_assignment_status()
-
-        result = {
-            "tutors": tutor_count,
+        return {
             "courses": course_count,
             "schedules": schedule_count,
             "assignments": assignment_count,
         }
-        print(f"[sync] {result}")
-        return result
+
+    async def _preload_tutor_map(self):
+        """DB에 저장된 강사의 notion_page_id → local id 매핑을 미리 로드."""
+        instructors = await self._instructor_repo.list_instructors()
+        for inst in instructors:
+            if inst.get("notion_page_id"):
+                self._tutor_map[inst["notion_page_id"]] = inst["id"]
 
     # ── 튜터 동기화 ──
 
@@ -356,6 +378,8 @@ def _parse_lecture(page: dict) -> dict:
     schedule_ids = _extract_relation_ids(props, "lecture_schedules")
     target_names = _extract_rollup_texts(props, "target_name")
     workbook_full_url = _extract_rollup_url(props, "workbook_full_URL")
+    manager_names = _extract_rollup_texts(props, "lecture_PIC")
+    sales_rep_names = _extract_rollup_texts(props, "sales_PIC")
 
     return {
         "notion_page_id": page["id"],
@@ -366,6 +390,8 @@ def _parse_lecture(page: dict) -> dict:
         "lecture_end": lecture_end or None,
         "students": students,
         "workbook_full_url": workbook_full_url or None,
+        "manager": ", ".join(manager_names) if manager_names else None,
+        "sales_rep": ", ".join(sales_rep_names) if sales_rep_names else None,
         "schedule_ids": schedule_ids,
     }
 

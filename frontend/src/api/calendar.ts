@@ -12,6 +12,8 @@ export interface CalendarEvent {
   assignment_id: string
   notion_page_id: string
   workbook_full_url: string | null
+  manager: string | null
+  sales_rep: string | null
 }
 
 export interface CalendarResponse {
