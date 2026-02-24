@@ -194,7 +194,7 @@ export default function Availability() {
   }
 
   // courseDetail이 로드되면 날짜 자동 선택
-  useMemo(() => {
+  useEffect(() => {
     if (courseDetail?.dates && selectedCourseId) {
       const dates = courseDetail.dates.map((d) => d.date).sort()
       setSelectedDates(dates)
