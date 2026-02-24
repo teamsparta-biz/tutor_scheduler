@@ -17,6 +17,16 @@ class SupabaseAssignmentRepository(AssignmentRepository):
         result = query.execute()
         return result.data
 
+    async def list_assignments_by_date_range(self, start_date: str, end_date: str) -> list[dict]:
+        result = (
+            self._client.table("assignments")
+            .select("*")
+            .gte("date", start_date)
+            .lte("date", end_date)
+            .execute()
+        )
+        return result.data
+
     async def create_assignment(self, data: dict) -> dict:
         try:
             result = self._client.table("assignments").insert(data).execute()

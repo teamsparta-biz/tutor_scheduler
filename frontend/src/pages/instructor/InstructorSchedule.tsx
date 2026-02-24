@@ -87,12 +87,16 @@ export default function InstructorSchedule() {
 
   const upsertMut = useMutation({
     mutationFn: createAvailability,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['availability', instructorId] }),
+    onSuccess: () => queryClient.invalidateQueries({
+      queryKey: ['availability', instructorId, startDate, endDate],
+    }),
   })
 
   const removeMut = useMutation({
     mutationFn: deleteAvailability,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['availability', instructorId] }),
+    onSuccess: () => queryClient.invalidateQueries({
+      queryKey: ['availability', instructorId, startDate, endDate],
+    }),
   })
 
   function handleDayClick(dateStr: string) {

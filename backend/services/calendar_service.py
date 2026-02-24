@@ -18,27 +18,23 @@ class CalendarService:
         self._instructor_repo = instructor_repo
 
     async def get_calendar(self, start_date: str, end_date: str) -> dict:
-        assignments = await self._assignment_repo.list_assignments()
-        filtered = [
-            a for a in assignments
-            if start_date <= str(a["date"]) <= end_date
-        ]
-
+        # DB 레벨 필터링: 날짜 범위의 배정만 조회
+        filtered = await self._assignment_repo.list_assignments_by_date_range(
+            start_date, end_date,
+        )
         if not filtered:
             return {"events": []}
 
+        # 필요한 instructor_id만 추출하여 전체 강사 목록에서 매핑
         instructors = await self._instructor_repo.list_instructors()
         instructor_map = {i["id"]: i for i in instructors}
 
         courses = await self._course_repo.list_courses()
         course_map = {c["id"]: c for c in courses}
 
-        # course_date_id → course_id 매핑 구축
-        cd_to_course: dict[str, str] = {}
-        for course in courses:
-            dates = await self._course_date_repo.list_dates_by_course(course["id"])
-            for cd in dates:
-                cd_to_course[cd["id"]] = course["id"]
+        # 전체 course_dates를 한 번에 조회 (N+1 제거)
+        all_dates = await self._course_date_repo.list_all_dates()
+        cd_to_course = {cd["id"]: cd["course_id"] for cd in all_dates}
 
         events = []
         for a in filtered:

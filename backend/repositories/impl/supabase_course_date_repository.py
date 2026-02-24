@@ -18,6 +18,15 @@ class SupabaseCourseDateRepository(CourseDateRepository):
         )
         return result.data
 
+    async def list_all_dates(self) -> list[dict]:
+        result = (
+            self._client.table("course_dates")
+            .select("*")
+            .order("date")
+            .execute()
+        )
+        return result.data
+
     async def create_dates(self, course_id: str, dates: list[dict]) -> list[dict]:
         rows = [{"course_id": course_id, **d} for d in dates]
         result = self._client.table("course_dates").insert(rows).execute()

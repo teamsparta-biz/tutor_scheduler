@@ -27,8 +27,29 @@ class SupabaseAvailabilityRepository(AvailabilityRepository):
         )
         return result.data
 
+    async def list_by_instructor_and_date_range(
+        self, instructor_id: str, start_date: str, end_date: str,
+    ) -> list[dict]:
+        result = (
+            self._client.table("availability")
+            .select("*")
+            .eq("instructor_id", instructor_id)
+            .gte("date", start_date)
+            .lte("date", end_date)
+            .execute()
+        )
+        return result.data
+
     async def create(self, data: dict) -> dict:
         result = self._client.table("availability").insert(data).execute()
+        return result.data[0]
+
+    async def upsert(self, data: dict) -> dict:
+        result = (
+            self._client.table("availability")
+            .upsert(data, on_conflict="instructor_id,date")
+            .execute()
+        )
         return result.data[0]
 
     async def update(self, availability_id: str, data: dict) -> dict | None:

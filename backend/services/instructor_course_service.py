@@ -34,42 +34,37 @@ class InstructorCourseService:
         if not all_assignments:
             return {"items": [], "total": 0, "page": page, "page_size": page_size, "total_pages": 0}
 
-        # 2. course_date_id → assignment 매핑 + course_date 정보 수집
-        cd_ids = list({a["course_date_id"] for a in all_assignments})
+        cd_ids = {a["course_date_id"] for a in all_assignments}
 
-        # course_date_id → course_id 역매핑을 위해 전체 course 조회
+        # 2. 전체 course_dates를 한 번에 조회 (N+1 제거)
+        all_dates = await self._course_date_repo.list_all_dates()
+        cd_to_course: dict[str, str] = {}
+        cd_info: dict[str, dict] = {}
+        dates_by_course: dict[str, list[dict]] = {}
+        for d in all_dates:
+            dates_by_course.setdefault(d["course_id"], []).append(d)
+            if d["id"] in cd_ids:
+                cd_to_course[d["id"]] = d["course_id"]
+                cd_info[d["id"]] = d
+
+        course_id_set = set(cd_to_course.values())
+
+        # 3. 필요한 course만 조회
         all_courses = await self._course_repo.list_courses()
         course_map = {c["id"]: c for c in all_courses}
 
-        # course_date별 정보 수집
-        course_id_set: set[str] = set()
-        cd_to_course: dict[str, str] = {}
-        cd_info: dict[str, dict] = {}
-
-        for course in all_courses:
-            dates = await self._course_date_repo.list_dates_by_course(course["id"])
-            for d in dates:
-                if d["id"] in cd_ids:
-                    cd_to_course[d["id"]] = course["id"]
-                    cd_info[d["id"]] = d
-                    course_id_set.add(course["id"])
-
-        # 3. 고유 course별 데이터 조합
+        # 4. 고유 course별 데이터 조합
         course_items: list[dict] = []
         for course_id in course_id_set:
             course = course_map.get(course_id)
             if not course:
                 continue
 
-            # 이 course에서 강사가 배정된 assignment만 필터
             course_assignments = [
                 a for a in all_assignments if cd_to_course.get(a["course_date_id"]) == course_id
             ]
-
-            # 강사의 전체 role 결정 (가장 많이 배정된 class_name 기준)
             role = _determine_role(course_assignments)
 
-            # 배정된 날짜 정보
             dates_list = []
             for a in sorted(course_assignments, key=lambda x: str(x.get("date", ""))):
                 cd = cd_info.get(a["course_date_id"], {})
@@ -82,8 +77,8 @@ class InstructorCourseService:
                     "role": CLASS_NAME_TO_ROLE.get(a.get("class_name", ""), a.get("class_name", "강사")),
                 })
 
-            # 전체 course dates 수
-            all_dates = await self._course_date_repo.list_dates_by_course(course_id)
+            # 메모리에서 total_dates 계산 (2차 N+1 제거)
+            total_dates = len(dates_by_course.get(course_id, []))
 
             course_items.append({
                 "course_id": course_id,
@@ -94,18 +89,17 @@ class InstructorCourseService:
                 "students": course.get("students"),
                 "lecture_start": course.get("lecture_start"),
                 "lecture_end": course.get("lecture_end"),
-                "total_dates": len(all_dates),
+                "total_dates": total_dates,
                 "role": role,
                 "dates": dates_list,
             })
 
-        # lecture_start 기준 정렬 (최신순)
         course_items.sort(
             key=lambda x: str(x.get("lecture_start") or ""),
             reverse=True,
         )
 
-        # 4. 페이지네이션
+        # 5. 페이지네이션
         total = len(course_items)
         offset = (page - 1) * page_size
         items = course_items[offset: offset + page_size]
@@ -124,7 +118,6 @@ def _determine_role(assignments: list[dict]) -> str:
     """배정 목록에서 대표 역할을 결정."""
     if not assignments:
         return "강사"
-    # class_name 빈도 계산
     counts: dict[str, int] = {}
     for a in assignments:
         cn = a.get("class_name", "")

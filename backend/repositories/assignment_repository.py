@@ -9,6 +9,11 @@ class AssignmentRepository(ABC):
         ...
 
     @abstractmethod
+    async def list_assignments_by_date_range(self, start_date: str, end_date: str) -> list[dict]:
+        """날짜 범위로 배정 조회 (DB 레벨 필터링)."""
+        ...
+
+    @abstractmethod
     async def create_assignment(self, data: dict) -> dict:
         """배정 생성. UNIQUE 위반 시 예외 발생."""
         ...

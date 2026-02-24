@@ -21,14 +21,12 @@ async def list_availability(
     if user.role == 'instructor':
         instructor_id = user.instructor_id
 
-    if instructor_id:
-        items = await service.list_by_instructor(instructor_id)
-        if start_date and end_date:
-            items = [
-                a for a in items
-                if start_date <= str(a["date"]) <= end_date
-            ]
-        return items
+    if instructor_id and start_date and end_date:
+        return await service.list_by_instructor_and_date_range(
+            instructor_id, start_date, end_date,
+        )
+    elif instructor_id:
+        return await service.list_by_instructor(instructor_id)
     elif start_date and end_date:
         return await service.list_by_date_range(start_date, end_date)
     return []

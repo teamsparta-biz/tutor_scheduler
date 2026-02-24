@@ -9,6 +9,12 @@ class FakeAssignmentRepository(AssignmentRepository):
         self._store: dict[str, dict] = {}
         self._unique_index: set[tuple[str, str]] = set()  # (instructor_id, date)
 
+    async def list_assignments_by_date_range(self, start_date: str, end_date: str) -> list[dict]:
+        return [
+            a for a in self._store.values()
+            if start_date <= str(a.get("date", "")) <= end_date
+        ]
+
     async def list_assignments(self, filters: dict | None = None) -> list[dict]:
         items = list(self._store.values())
         if filters:

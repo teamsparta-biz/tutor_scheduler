@@ -14,7 +14,7 @@ class SupabaseProfileRepository(ProfileRepository):
             .maybe_single()
             .execute()
         )
-        return result.data
+        return result.data if result else None
 
     async def create(self, data: dict) -> dict:
         result = (
@@ -32,4 +32,4 @@ class SupabaseProfileRepository(ProfileRepository):
             .maybe_single()
             .execute()
         )
-        return result.data
+        return result.data if result else None

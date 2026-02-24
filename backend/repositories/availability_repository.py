@@ -13,7 +13,17 @@ class AvailabilityRepository(ABC):
         ...
 
     @abstractmethod
+    async def list_by_instructor_and_date_range(
+        self, instructor_id: str, start_date: str, end_date: str,
+    ) -> list[dict]:
+        ...
+
+    @abstractmethod
     async def create(self, data: dict) -> dict:
+        ...
+
+    @abstractmethod
+    async def upsert(self, data: dict) -> dict:
         ...
 
     @abstractmethod

@@ -10,6 +10,9 @@ class FakeCourseDateRepository(CourseDateRepository):
     async def list_dates_by_course(self, course_id: str) -> list[dict]:
         return [d for d in self._store.values() if d["course_id"] == course_id]
 
+    async def list_all_dates(self) -> list[dict]:
+        return list(self._store.values())
+
     async def create_dates(self, course_id: str, dates: list[dict]) -> list[dict]:
         result = []
         for d in dates:

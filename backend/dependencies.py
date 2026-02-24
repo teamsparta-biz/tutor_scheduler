@@ -185,10 +185,17 @@ def get_auth_service(
     return AuthService(profile_repo)
 
 
+# user_id → UserProfile 캐시 (서버 프로세스 수명 동안 유지, TTL 10분)
+_profile_cache: dict[str, tuple[float, UserProfile]] = {}
+_PROFILE_CACHE_TTL = 600  # 10분
+
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
 ) -> UserProfile:
-    """JWT 토큰 검증 → 프로필 조회. DB 의존성은 토큰 검증 후 lazy 해결."""
+    """JWT 토큰 검증 → 프로필 조회 (캐시 적용)."""
+    import time
+
     if not credentials:
         raise AuthenticationError("인증 토큰이 필요합니다")
 
@@ -208,15 +215,22 @@ async def get_current_user(
 
     user_id = payload.get("sub")
     email = payload.get("email", "")
-    logger.info("JWT 검증 성공: user_id=%s, email=%s", user_id, email)
     if not user_id:
         raise AuthenticationError("토큰에 사용자 정보가 없습니다")
 
-    # 토큰 유효 → DB 접근 (lazy resolution)
+    # 캐시 확인
+    now = time.time()
+    cached = _profile_cache.get(user_id)
+    if cached and (now - cached[0]) < _PROFILE_CACHE_TTL:
+        return cached[1]
+
+    # 캐시 미스 → DB 조회
     client = get_supabase_client()
     profile_repo = SupabaseProfileRepository(client)
     auth_service = AuthService(profile_repo)
-    return await auth_service.get_or_create_profile(user_id, email)
+    profile = await auth_service.get_or_create_profile(user_id, email)
+    _profile_cache[user_id] = (now, profile)
+    return profile
 
 
 async def require_admin(

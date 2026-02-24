@@ -182,9 +182,15 @@ class NotionSyncService:
         courses = await self._course_repo.list_courses()
         all_assignments = await self._assignment_repo.list_assignments()
 
+        # 전체 course_dates를 한 번에 조회 (N+1 제거)
+        all_dates = await self._course_date_repo.list_all_dates()
+        dates_by_course: dict[str, list[dict]] = {}
+        for d in all_dates:
+            dates_by_course.setdefault(d["course_id"], []).append(d)
+
         for course in courses:
             cid = course["id"]
-            dates = await self._course_date_repo.list_dates_by_course(cid)
+            dates = dates_by_course.get(cid, [])
             total = len(dates)
 
             cd_ids = {d["id"] for d in dates}

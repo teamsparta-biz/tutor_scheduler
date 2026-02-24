@@ -13,6 +13,15 @@ class FakeAvailabilityRepository(AvailabilityRepository):
             if a["instructor_id"] == instructor_id
         ]
 
+    async def list_by_instructor_and_date_range(
+        self, instructor_id: str, start_date: str, end_date: str,
+    ) -> list[dict]:
+        return [
+            a for a in self._store.values()
+            if a["instructor_id"] == instructor_id
+            and start_date <= str(a["date"]) <= end_date
+        ]
+
     async def list_by_date_range(self, start_date: str, end_date: str) -> list[dict]:
         return [
             a for a in self._store.values()
@@ -23,6 +32,13 @@ class FakeAvailabilityRepository(AvailabilityRepository):
         item = {"id": str(uuid4()), **data}
         self._store[item["id"]] = item
         return item
+
+    async def upsert(self, data: dict) -> dict:
+        for item in self._store.values():
+            if item["instructor_id"] == data["instructor_id"] and str(item["date"]) == str(data["date"]):
+                item.update(data)
+                return item
+        return await self.create(data)
 
     async def update(self, availability_id: str, data: dict) -> dict | None:
         item = self._store.get(availability_id)
