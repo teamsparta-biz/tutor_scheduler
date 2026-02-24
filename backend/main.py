@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -5,13 +7,18 @@ from fastapi.responses import JSONResponse
 from exceptions import AuthenticationError, AuthorizationError
 from routers import instructors, courses, assignments, calendar, availability, auth
 
+ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5173",
+).split(",")
+
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Instructor Scheduler API")
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=ALLOWED_ORIGINS,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
