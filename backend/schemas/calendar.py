@@ -18,6 +18,8 @@ class CalendarEvent(BaseModel):
     assignment_status: str | None = None
     class_name: str | None = None
     assignment_id: str
+    notion_page_id: str = ""
+    workbook_full_url: str | None = None
 
 
 class CalendarResponse(BaseModel):

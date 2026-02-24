@@ -45,10 +45,9 @@ export default function Courses() {
     mutationFn: syncCourses,
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['courses'] })
-      queryClient.invalidateQueries({ queryKey: ['instructors'] })
       queryClient.invalidateQueries({ queryKey: ['assignments'] })
       queryClient.invalidateQueries({ queryKey: ['calendar'] })
-      alert(`동기화 완료: 강사 ${result.tutors}명, 교육 ${result.courses}건, 일정 ${result.schedules}건, 배정 ${result.assignments}건`)
+      alert(`강의 동기화 완료: 교육 ${result.courses}건, 일정 ${result.schedules}건, 배정 ${result.assignments}건`)
     },
     onError: (err) => {
       alert(`동기화 실패: ${err instanceof Error ? err.message : '알 수 없는 오류'}`)
@@ -109,7 +108,7 @@ export default function Courses() {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          {syncMutation.isPending ? '동기화 중...' : 'Notion 동기화'}
+          {syncMutation.isPending ? '동기화 중...' : '강의 동기화'}
         </button>
       </div>
 
@@ -222,10 +221,30 @@ export default function Courses() {
                     {selectedCourse.assignment_status ?? '-'}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Notion ID</span>
-                  <span className="text-gray-700 font-mono text-xs">{selectedCourse.notion_page_id}</span>
-                </div>
+                {selectedCourse.notion_page_id && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <a
+                      href={`https://notion.so/${selectedCourse.notion_page_id.replace(/-/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 100 100" fill="currentColor"><path d="M6.6 12.3c4.3 3.5 5.9 3.3 14-2L81 3.6c3.3-2.3 1-5.9-5.3-4.3L21.1 10.2c-5.3 1.6-6.6 5-2.7 7.6l-2.7-1z"/><path d="M11.6 89.1V24.9c0-3.4 1.1-5 4.4-7.3L78.5 6c3.5-2.3 7.7-1.3 7.7 4.3v63c0 4.8-2.7 7-7.3 7.4L19.2 93c-4.8.7-7.6-1.6-7.6-5.5zm11.4-60.3c0-2.5.5-3.6 2-4.4l2.3-1.1c1.5-.7 3.3.3 3.3 2.3v55.3c0 2-1.2 3-3 2.7l-2.3-.5c-1.5-.4-2.3-1.8-2.3-3.5V28.8z"/></svg>
+                      Notion 페이지
+                    </a>
+                    {selectedCourse.workbook_full_url && (
+                      <a
+                        href={selectedCourse.workbook_full_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                        교안
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
 
               <h4 className="text-sm font-semibold text-gray-700 mb-3">교육 일정 ({selectedDates.length}일)</h4>

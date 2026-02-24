@@ -10,6 +10,8 @@ export interface CalendarEvent {
   assignment_status: string | null
   class_name: string | null
   assignment_id: string
+  notion_page_id: string
+  workbook_full_url: string | null
 }
 
 export interface CalendarResponse {

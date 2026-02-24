@@ -53,6 +53,8 @@ class CalendarService:
                 "assignment_status": course.get("assignment_status"),
                 "class_name": a.get("class_name"),
                 "assignment_id": a["id"],
+                "notion_page_id": course.get("notion_page_id", ""),
+                "workbook_full_url": course.get("workbook_full_url"),
             })
 
         return {"events": events}
