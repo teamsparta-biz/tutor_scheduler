@@ -1,10 +1,4 @@
-async function handleResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}))
-    throw new Error(body.detail ?? `HTTP ${response.status}`)
-  }
-  return response.json()
-}
+import { fetchWithAuth, handleResponse } from './client'
 
 export interface InstructorCourseDate {
   date: string
@@ -42,7 +36,7 @@ export async function listInstructorCourses(
   page: number = 1,
   pageSize: number = 10,
 ): Promise<PaginatedInstructorCourses> {
-  const res = await fetch(
+  const res = await fetchWithAuth(
     `/api/instructors/${instructorId}/courses?page=${page}&page_size=${pageSize}`,
   )
   return handleResponse<PaginatedInstructorCourses>(res)

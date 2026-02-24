@@ -1,23 +1,16 @@
 import type { Instructor } from '../types'
-
-async function handleResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}))
-    throw new Error(body.detail ?? `HTTP ${response.status}`)
-  }
-  return response.json()
-}
+import { fetchWithAuth, handleResponse } from './client'
 
 export async function listInstructors(isActive?: boolean): Promise<Instructor[]> {
   const params = new URLSearchParams()
   if (isActive !== undefined) params.set('is_active', String(isActive))
   const query = params.toString()
-  const res = await fetch(`/api/instructors${query ? `?${query}` : ''}`)
+  const res = await fetchWithAuth(`/api/instructors${query ? `?${query}` : ''}`)
   return handleResponse<Instructor[]>(res)
 }
 
 export async function getInstructor(id: string): Promise<Instructor> {
-  const res = await fetch(`/api/instructors/${id}`)
+  const res = await fetchWithAuth(`/api/instructors/${id}`)
   return handleResponse<Instructor>(res)
 }
 
@@ -28,7 +21,7 @@ export async function createInstructor(data: {
   specialty?: string | null
   is_active?: boolean
 }): Promise<Instructor> {
-  const res = await fetch('/api/instructors', {
+  const res = await fetchWithAuth('/api/instructors', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -46,7 +39,7 @@ export async function updateInstructor(
     is_active?: boolean
   },
 ): Promise<Instructor> {
-  const res = await fetch(`/api/instructors/${id}`, {
+  const res = await fetchWithAuth(`/api/instructors/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -55,7 +48,7 @@ export async function updateInstructor(
 }
 
 export async function deleteInstructor(id: string): Promise<void> {
-  const res = await fetch(`/api/instructors/${id}`, { method: 'DELETE' })
+  const res = await fetchWithAuth(`/api/instructors/${id}`, { method: 'DELETE' })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     throw new Error(body.detail ?? `HTTP ${res.status}`)
@@ -63,6 +56,6 @@ export async function deleteInstructor(id: string): Promise<void> {
 }
 
 export async function getAvailableInstructors(date: string): Promise<Instructor[]> {
-  const res = await fetch(`/api/instructors/available?date=${date}`)
+  const res = await fetchWithAuth(`/api/instructors/available?date=${date}`)
   return handleResponse<Instructor[]>(res)
 }

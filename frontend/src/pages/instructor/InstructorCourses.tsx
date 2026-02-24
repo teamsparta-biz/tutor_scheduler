@@ -110,7 +110,8 @@ function CourseCard({ course }: { course: InstructorCourse }) {
 }
 
 export default function InstructorCourses() {
-  const { instructorId } = useAuth()
+  const { profile } = useAuth()
+  const instructorId = profile?.instructor_id ?? null
   const [page, setPage] = useState(1)
   const [filter, setFilter] = useState<Filter>('all')
   const pageSize = 10

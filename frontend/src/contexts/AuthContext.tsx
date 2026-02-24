@@ -1,60 +1,118 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
+import type { Session } from '@supabase/supabase-js'
+import { handleResponse } from '../api/client'
 
 type Role = 'admin' | 'instructor'
 
+interface UserProfile {
+  user_id: string
+  email: string
+  role: Role
+  display_name: string | null
+  instructor_id: string | null
+}
+
 interface AuthState {
-  role: Role | null
-  instructorId: string | null
-  instructorName: string | null
+  loading: boolean
+  session: Session | null
+  profile: UserProfile | null
+  denied: boolean
 }
 
-interface AuthContextValue extends AuthState {
-  setAdmin: () => void
-  setInstructor: (id: string, name: string) => void
-  logout: () => void
+interface AuthContextValue {
+  loading: boolean
+  session: Session | null
+  profile: UserProfile | null
+  denied: boolean
+  signInWithGoogle: () => Promise<void>
+  logout: () => Promise<void>
 }
-
-const STORAGE_KEY = 'scheduler-auth'
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-function loadState(): AuthState {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch {
-    // ignore
-  }
-  return { role: null, instructorId: null, instructorName: null }
-}
-
-function saveState(state: AuthState) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>(loadState)
+  const [state, setState] = useState<AuthState>({
+    loading: true,
+    session: null,
+    profile: null,
+    denied: false,
+  })
+
+  async function fetchProfile(accessToken: string): Promise<UserProfile | 'denied' | null> {
+    try {
+      const res = await fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      console.log('[Auth] /api/auth/me status:', res.status)
+      if (res.status === 403) {
+        return 'denied'
+      }
+      if (res.status === 401) {
+        const body = await res.text()
+        console.error('[Auth] 401 응답:', body)
+        return null
+      }
+      const data = await handleResponse<UserProfile>(res)
+      console.log('[Auth] 프로필 조회 성공:', data)
+      return data
+    } catch (e) {
+      console.error('[Auth] fetchProfile 에러:', e)
+      return null
+    }
+  }
 
   useEffect(() => {
-    saveState(state)
-  }, [state])
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (
+          (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') &&
+          session
+        ) {
+          console.log('[Auth] event:', event, 'email:', session.user?.email)
+          setState((s) => ({ ...s, loading: true }))
+          const result = await fetchProfile(session.access_token)
+          if (result === 'denied') {
+            setState({ loading: false, session, profile: null, denied: true })
+          } else {
+            setState({ loading: false, session, profile: result, denied: false })
+          }
+        } else if (event === 'INITIAL_SESSION' && !session) {
+          setState({ loading: false, session: null, profile: null, denied: false })
+        } else if (event === 'SIGNED_OUT') {
+          setState({ loading: false, session: null, profile: null, denied: false })
+        } else if (event === 'TOKEN_REFRESHED' && session) {
+          setState((s) => ({ ...s, session }))
+        }
+      },
+    )
 
-  function setAdmin() {
-    setState({ role: 'admin', instructorId: null, instructorName: null })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  async function signInWithGoogle() {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/login` },
+    })
   }
 
-  function setInstructor(id: string, name: string) {
-    setState({ role: 'instructor', instructorId: id, instructorName: name })
-  }
-
-  function logout() {
-    setState({ role: null, instructorId: null, instructorName: null })
-    localStorage.removeItem(STORAGE_KEY)
+  async function logout() {
+    await supabase.auth.signOut()
+    setState({ loading: false, session: null, profile: null, denied: false })
   }
 
   return (
-    <AuthContext.Provider value={{ ...state, setAdmin, setInstructor, logout }}>
+    <AuthContext.Provider
+      value={{
+        loading: state.loading,
+        session: state.session,
+        profile: state.profile,
+        denied: state.denied,
+        signInWithGoogle,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

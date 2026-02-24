@@ -1,6 +1,21 @@
+import logging
 from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
+import jwt
+from jwt import PyJWKClient
 
 from config import settings
+
+logger = logging.getLogger(__name__)
+
+# Supabase JWKS 엔드포인트에서 공개키를 가져오는 클라이언트 (캐시 내장)
+_jwks_client = PyJWKClient(
+    f"{settings.SUPABASE_URL}/auth/v1/.well-known/jwks.json",
+    cache_keys=True,
+    lifespan=3600,
+)
+from exceptions import AuthenticationError, AuthorizationError
 from clients.notion_client import NotionClient
 from clients.supabase_client import SupabaseClient
 from clients.impl.notion_client_impl import NotionClientImpl
@@ -22,7 +37,14 @@ from services.calendar_service import CalendarService
 from services.notion_sync_service import NotionSyncService
 from services.instructor_course_service import InstructorCourseService
 from repositories.availability_repository import AvailabilityRepository
+from repositories.impl.supabase_availability_repository import SupabaseAvailabilityRepository
 from services.availability_service import AvailabilityService
+from repositories.profile_repository import ProfileRepository
+from repositories.impl.supabase_profile_repository import SupabaseProfileRepository
+from services.auth_service import AuthService
+from schemas.auth import UserProfile
+
+_bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_notion_client() -> NotionClient:
@@ -89,8 +111,10 @@ def get_assignment_repository(
     return SupabaseAssignmentRepository(client)
 
 
-def get_availability_repository() -> AvailabilityRepository:
-    raise NotImplementedError("Override in dev_main or provide real implementation")
+def get_availability_repository(
+    client: SupabaseClient = Depends(get_supabase_client),
+) -> AvailabilityRepository:
+    return SupabaseAvailabilityRepository(client)
 
 
 def get_availability_service(
@@ -145,3 +169,59 @@ def get_calendar_service(
     instructor_repo: InstructorRepository = Depends(get_instructor_repository),
 ) -> CalendarService:
     return CalendarService(assignment_repo, course_date_repo, course_repo, instructor_repo)
+
+
+# --- Auth ---
+
+def get_profile_repository(
+    client: SupabaseClient = Depends(get_supabase_client),
+) -> ProfileRepository:
+    return SupabaseProfileRepository(client)
+
+
+def get_auth_service(
+    profile_repo: ProfileRepository = Depends(get_profile_repository),
+) -> AuthService:
+    return AuthService(profile_repo)
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
+) -> UserProfile:
+    """JWT 토큰 검증 → 프로필 조회. DB 의존성은 토큰 검증 후 lazy 해결."""
+    if not credentials:
+        raise AuthenticationError("인증 토큰이 필요합니다")
+
+    try:
+        signing_key = _jwks_client.get_signing_key_from_jwt(credentials.credentials)
+        payload = jwt.decode(
+            credentials.credentials,
+            signing_key.key,
+            algorithms=["ES256"],
+            audience="authenticated",
+        )
+    except jwt.ExpiredSignatureError:
+        raise AuthenticationError("토큰이 만료되었습니다")
+    except jwt.InvalidTokenError as e:
+        logger.error("JWT 디코딩 실패: %s", e)
+        raise AuthenticationError("유효하지 않은 토큰입니다")
+
+    user_id = payload.get("sub")
+    email = payload.get("email", "")
+    logger.info("JWT 검증 성공: user_id=%s, email=%s", user_id, email)
+    if not user_id:
+        raise AuthenticationError("토큰에 사용자 정보가 없습니다")
+
+    # 토큰 유효 → DB 접근 (lazy resolution)
+    client = get_supabase_client()
+    profile_repo = SupabaseProfileRepository(client)
+    auth_service = AuthService(profile_repo)
+    return await auth_service.get_or_create_profile(user_id, email)
+
+
+async def require_admin(
+    user: UserProfile = Depends(get_current_user),
+) -> UserProfile:
+    if user.role != "admin":
+        raise AuthorizationError("관리자 권한이 필요합니다")
+    return user

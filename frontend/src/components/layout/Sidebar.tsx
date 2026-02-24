@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 
 const navItems = [
-  { to: '/', label: '대시보드' },
+  { to: '/dashboard', label: '대시보드' },
   { to: '/instructors', label: '강사 관리' },
   { to: '/courses', label: '교육 일정' },
   { to: '/availability', label: '강사 가용성' },
@@ -16,7 +16,7 @@ export default function Sidebar() {
           <NavLink
             key={to}
             to={to}
-            end={to === '/'}
+            end={to === '/dashboard'}
             className={({ isActive }) =>
               `px-3 py-2 rounded text-sm ${
                 isActive

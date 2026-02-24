@@ -40,7 +40,8 @@ function getCalendarDays(year: number, month: number): CalendarDay[] {
 
 export default function InstructorSchedule() {
   const queryClient = useQueryClient()
-  const { instructorId } = useAuth()
+  const { profile } = useAuth()
+  const instructorId = profile?.instructor_id ?? null
   const now = new Date()
   const [currentYear, setCurrentYear] = useState(now.getFullYear())
   const [currentMonth, setCurrentMonth] = useState(now.getMonth())

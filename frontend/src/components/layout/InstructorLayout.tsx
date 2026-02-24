@@ -2,13 +2,15 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 
 export default function InstructorLayout() {
-  const { instructorName, logout } = useAuth()
+  const { profile, logout } = useAuth()
   const navigate = useNavigate()
 
-  function handleLogout() {
-    logout()
+  async function handleLogout() {
+    await logout()
     navigate('/login')
   }
+
+  const displayName = profile?.display_name ?? profile?.email ?? '강사'
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `px-3 py-1.5 text-sm rounded-md transition ${
@@ -26,7 +28,7 @@ export default function InstructorLayout() {
           </nav>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-600">{instructorName} 강사님</span>
+          <span className="text-sm text-gray-600">{displayName} 강사님</span>
           <button
             onClick={handleLogout}
             className="text-sm text-gray-500 hover:text-gray-700 cursor-pointer"
