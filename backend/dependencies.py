@@ -24,14 +24,12 @@ from repositories.instructor_repository import InstructorRepository
 from repositories.impl.supabase_instructor_repository import SupabaseInstructorRepository
 from repositories.course_repository import CourseRepository
 from repositories.impl.supabase_course_repository import SupabaseCourseRepository
-from repositories.impl.notion_course_repository import NotionCourseRepository
 from repositories.course_date_repository import CourseDateRepository
 from repositories.impl.supabase_course_date_repository import SupabaseCourseDateRepository
 from repositories.assignment_repository import AssignmentRepository
 from repositories.impl.supabase_assignment_repository import SupabaseAssignmentRepository
 from services.instructor_service import InstructorService
 from services.course_service import CourseService
-from services.course_sync_service import CourseSyncService
 from services.assignment_service import AssignmentService
 from services.calendar_service import CalendarService
 from services.notion_sync_service import NotionSyncService
@@ -83,24 +81,11 @@ def get_course_date_repository(
     return SupabaseCourseDateRepository(client)
 
 
-def get_notion_course_repository(
-    client: NotionClient = Depends(get_notion_client),
-) -> CourseRepository:
-    return NotionCourseRepository(client, database_id=settings.NOTION_DB_LECTURE)
-
-
 def get_course_service(
     repo: CourseRepository = Depends(get_course_repository),
     date_repo: CourseDateRepository = Depends(get_course_date_repository),
 ) -> CourseService:
     return CourseService(repo, date_repo)
-
-
-def get_course_sync_service(
-    notion_repo: CourseRepository = Depends(get_notion_course_repository),
-    local_repo: CourseRepository = Depends(get_course_repository),
-) -> CourseSyncService:
-    return CourseSyncService(notion_repo, local_repo)
 
 
 # --- Assignment ---
