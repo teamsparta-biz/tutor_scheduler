@@ -5,7 +5,7 @@ import { getCalendar } from '../../api/calendar'
 import type { CalendarEvent } from '../../api/calendar'
 import { listAvailability, createAvailability, deleteAvailability } from '../../api/availability'
 import type { Availability } from '../../api/availability'
-import { formatDateStr, getCalendarDays } from '../../utils/date'
+import { getCalendarDays } from '../../utils/date'
 import type { CalendarDay } from '../../utils/date'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']

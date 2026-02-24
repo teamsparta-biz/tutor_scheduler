@@ -7,7 +7,7 @@ import Pagination from '../components/Pagination'
 import type { CalendarEvent } from '../api/calendar'
 import type { Availability } from '../api/availability'
 import type { Instructor } from '../types'
-import { formatDateStr, getCalendarDays } from '../utils/date'
+import { getCalendarDays } from '../utils/date'
 import { isTechTutor } from '../utils/instructor'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
