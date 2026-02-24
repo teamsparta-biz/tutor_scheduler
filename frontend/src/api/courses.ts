@@ -6,8 +6,10 @@ export interface CourseDetail extends Course {
 }
 
 export interface SyncResult {
-  synced: number
-  errors: number
+  tutors: number
+  courses: number
+  schedules: number
+  assignments: number
 }
 
 export async function listCourses(): Promise<Course[]> {

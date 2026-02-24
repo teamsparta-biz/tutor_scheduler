@@ -45,3 +45,11 @@ class SupabaseInstructorRepository(InstructorRepository):
             .execute()
         )
         return len(result.data) > 0
+
+    async def upsert_instructor(self, data: dict) -> dict:
+        result = (
+            self._client.table("instructors")
+            .upsert(data, on_conflict="notion_page_id")
+            .execute()
+        )
+        return result.data[0]

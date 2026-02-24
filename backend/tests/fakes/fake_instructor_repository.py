@@ -27,3 +27,11 @@ class FakeInstructorRepository(InstructorRepository):
 
     async def delete_instructor(self, instructor_id: str) -> bool:
         return self._store.pop(instructor_id, None) is not None
+
+    async def upsert_instructor(self, data: dict) -> dict:
+        # notion_page_id로 기존 항목 찾기
+        for item in self._store.values():
+            if item.get("notion_page_id") == data.get("notion_page_id"):
+                item.update(data)
+                return item
+        return await self.create_instructor(data)

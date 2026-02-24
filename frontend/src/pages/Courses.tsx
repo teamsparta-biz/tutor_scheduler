@@ -44,8 +44,8 @@ export default function Courses() {
   const syncMutation = useMutation({
     mutationFn: syncCourses,
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['courses'] })
-      alert(`동기화 완료: ${result.synced}건 성공, ${result.errors}건 오류`)
+      queryClient.invalidateQueries()
+      alert(`동기화 완료: 강사 ${result.tutors}명, 교육 ${result.courses}건, 일정 ${result.schedules}건, 배정 ${result.assignments}건`)
     },
     onError: (err) => {
       alert(`동기화 실패: ${err instanceof Error ? err.message : '알 수 없는 오류'}`)

@@ -1,26 +1,26 @@
 from fastapi import APIRouter, Depends
 
-from dependencies import get_course_service, get_course_sync_service, get_current_user, require_admin
+from dependencies import get_course_service, get_notion_sync_service, get_current_user, require_admin
 from schemas.auth import UserProfile
 from schemas.course import (
     CourseCreate,
     CourseUpdate,
     CourseResponse,
     CourseDetailResponse,
-    SyncResultResponse,
+    FullSyncResultResponse,
 )
 from services.course_service import CourseService
-from services.course_sync_service import CourseSyncService
+from services.notion_sync_service import NotionSyncService
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 
 
-@router.post("/sync", response_model=SyncResultResponse)
+@router.post("/sync", response_model=FullSyncResultResponse)
 async def sync_courses(
     _admin: UserProfile = Depends(require_admin),
-    service: CourseSyncService = Depends(get_course_sync_service),
+    service: NotionSyncService = Depends(get_notion_sync_service),
 ):
-    return await service.sync_courses()
+    return await service.sync_all()
 
 
 @router.get("", response_model=list[CourseResponse])

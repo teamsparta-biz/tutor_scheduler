@@ -53,3 +53,10 @@ class CourseDetailResponse(CourseResponse):
 class SyncResultResponse(BaseModel):
     synced: int
     errors: int
+
+
+class FullSyncResultResponse(BaseModel):
+    tutors: int
+    courses: int
+    schedules: int
+    assignments: int

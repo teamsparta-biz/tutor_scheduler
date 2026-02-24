@@ -1,4 +1,8 @@
-"""Notion 3개 DB → 로컬 FakeRepository 동기화 서비스."""
+"""Notion 3개 DB → 로컬 DB 동기화 서비스.
+
+Notion이 유일한 외부 의존성. 나중에 Notion을 제거할 때는
+이 서비스와 NotionClient만 삭제하면 됨.
+"""
 
 from clients.notion_client import NotionClient
 from config import Settings
@@ -33,7 +37,6 @@ class NotionSyncService:
         tutor_count = await self._sync_tutors()
         course_count = await self._sync_courses()
         schedule_count, assignment_count = await self._sync_schedules()
-        # 배정 완료/미완료 계산
         await self._compute_assignment_status()
 
         result = {
@@ -54,7 +57,7 @@ class NotionSyncService:
             parsed = _parse_tutor(page)
             if not parsed["name"]:
                 continue
-            instructor = await self._instructor_repo.create_instructor(parsed)
+            instructor = await self._instructor_repo.upsert_instructor(parsed)
             self._tutor_map[parsed["notion_page_id"]] = instructor["id"]
             count += 1
         print(f"[sync] tutors: {count}")
@@ -69,7 +72,9 @@ class NotionSyncService:
             parsed = _parse_lecture(page)
             if not parsed["title"]:
                 continue
-            course = await self._course_repo.create_course(parsed)
+            # schedule_ids는 DB 컬럼이 아니므로 제거
+            parsed.pop("schedule_ids", None)
+            course = await self._course_repo.upsert_course(parsed)
             self._course_map[parsed["notion_page_id"]] = course["id"]
             count += 1
         print(f"[sync] courses: {count}")
@@ -97,7 +102,7 @@ class NotionSyncService:
             if not course_id:
                 continue
 
-            # course_date 생성
+            # course_date 생성 (중복 시 무시)
             date_entry: dict = {"date": parsed["date"], "day_number": parsed.get("day_number", 1)}
             if parsed.get("place"):
                 date_entry["place"] = parsed["place"]
@@ -105,10 +110,13 @@ class NotionSyncService:
                 date_entry["start_time"] = parsed["start_time"]
             if parsed.get("end_time") is not None:
                 date_entry["end_time"] = parsed["end_time"]
-            dates = await self._course_date_repo.create_dates(
-                course_id,
-                [date_entry],
-            )
+            try:
+                dates = await self._course_date_repo.create_dates(
+                    course_id,
+                    [date_entry],
+                )
+            except Exception:
+                continue  # unique 제약 등 → 스킵
             if not dates:
                 continue
 
@@ -147,18 +155,6 @@ class NotionSyncService:
                 except Exception:
                     pass
 
-        # day_number 후처리: 동일 course 내 날짜순 정렬로 Day 1, 2, 3 ... 부여
-        course_ids_seen: set[str] = set()
-        for item in list(self._course_date_repo._store.values()):
-            course_ids_seen.add(item["course_id"])
-        for cid in course_ids_seen:
-            dates_for_course = sorted(
-                [d for d in self._course_date_repo._store.values() if d["course_id"] == cid],
-                key=lambda d: str(d["date"]),
-            )
-            for idx, d in enumerate(dates_for_course, start=1):
-                d["day_number"] = idx
-
         print(f"[sync] schedules: {schedule_count}, assignments: {assignment_count}")
         return schedule_count, assignment_count
 
@@ -174,16 +170,19 @@ class NotionSyncService:
             dates = await self._course_date_repo.list_dates_by_course(cid)
             total = len(dates)
 
-            # 이 코스의 course_date_id 집합
             cd_ids = {d["id"] for d in dates}
-            # 배정된 course_date_id 집합 (최소 1명이라도 배정되면 배정됨)
             assigned_cd_ids = {
                 a["course_date_id"] for a in all_assignments
                 if a["course_date_id"] in cd_ids
             }
             assigned = len(assigned_cd_ids)
 
-            status = "배정 완료" if total > 0 and assigned >= total else "배정 미완료"
+            if total == 0:
+                status = None
+            elif assigned >= total:
+                status = "배정 완료"
+            else:
+                status = "배정 미완료"
 
             await self._course_repo.update_course(cid, {
                 "assignment_status": status,
@@ -196,7 +195,6 @@ class NotionSyncService:
 
 
 def _extract_title(props: dict, *keys: str) -> str:
-    """title 타입 속성에서 텍스트 추출."""
     for key in keys:
         prop = props.get(key)
         if prop and prop.get("type") == "title" and prop.get("title"):
@@ -205,7 +203,6 @@ def _extract_title(props: dict, *keys: str) -> str:
 
 
 def _extract_rich_text(props: dict, *keys: str) -> str:
-    """rich_text 타입 속성에서 텍스트 추출."""
     for key in keys:
         prop = props.get(key)
         if prop and prop.get("type") == "rich_text" and prop.get("rich_text"):
@@ -214,7 +211,6 @@ def _extract_rich_text(props: dict, *keys: str) -> str:
 
 
 def _extract_text(props: dict, *keys: str) -> str:
-    """rich_text 또는 title에서 텍스트 추출."""
     result = _extract_title(props, *keys)
     if result:
         return result
@@ -239,7 +235,6 @@ def _extract_select(props: dict, key: str) -> str:
     prop = props.get(key)
     if prop and prop.get("type") == "select" and prop.get("select"):
         return prop["select"].get("name", "")
-    # status 타입도 처리
     if prop and prop.get("type") == "status" and prop.get("status"):
         return prop["status"].get("name", "")
     return ""
@@ -253,7 +248,6 @@ def _extract_number(props: dict, key: str) -> int | float | None:
 
 
 def _extract_date_start(props: dict, key: str) -> str:
-    """date 타입에서 start 값 추출."""
     prop = props.get(key)
     if prop and prop.get("type") == "date" and prop.get("date"):
         return prop["date"].get("start") or ""
@@ -261,7 +255,6 @@ def _extract_date_start(props: dict, key: str) -> str:
 
 
 def _extract_relation_ids(props: dict, key: str) -> list[str]:
-    """relation 타입에서 페이지 ID 목록 추출."""
     prop = props.get(key)
     if prop and prop.get("type") == "relation":
         return [r.get("id", "") for r in prop.get("relation", []) if r.get("id")]
@@ -269,7 +262,6 @@ def _extract_relation_ids(props: dict, key: str) -> list[str]:
 
 
 def _extract_rollup_texts(props: dict, key: str) -> list[str]:
-    """rollup 타입에서 텍스트 배열 추출."""
     prop = props.get(key)
     if not prop or prop.get("type") != "rollup":
         return []
@@ -290,7 +282,6 @@ def _extract_rollup_texts(props: dict, key: str) -> list[str]:
 
 def _parse_tutor(page: dict) -> dict:
     props = page.get("properties", {})
-    # real_name(rich_text)을 우선, 없으면 unique_name(title) 사용
     name = _extract_rich_text(props, "real_name") or _extract_title(props, "unique_name")
     return {
         "notion_page_id": page["id"],
@@ -303,23 +294,15 @@ def _parse_tutor(page: dict) -> dict:
 
 
 def _extract_rollup_date(props: dict, key: str) -> str:
-    """rollup 타입에서 날짜(start) 값 추출.
-
-    Notion rollup은 집계 함수에 따라 두 가지 형태로 반환:
-    - rollup.type == "date"  → rollup.date.start (earliest/latest 집계)
-    - rollup.type == "array" → 배열 내 첫 번째 date 아이템
-    """
     prop = props.get(key)
     if not prop or prop.get("type") != "rollup":
         return ""
     rollup = prop.get("rollup", {})
     rollup_type = rollup.get("type", "")
 
-    # 집계 결과가 단일 date인 경우
     if rollup_type == "date" and rollup.get("date"):
         return rollup["date"].get("start") or ""
 
-    # 배열인 경우 첫 번째 date 아이템 추출
     if rollup_type == "array":
         for item in rollup.get("array", []):
             if item.get("type") == "date" and item.get("date"):
@@ -329,7 +312,6 @@ def _extract_rollup_date(props: dict, key: str) -> str:
 
 
 def _extract_rollup_url(props: dict, key: str) -> str:
-    """rollup 타입에서 첫 번째 URL 추출."""
     prop = props.get(key)
     if not prop or prop.get("type") != "rollup":
         return ""
@@ -388,5 +370,5 @@ def _parse_schedule(page: dict) -> dict:
         "main_tutor_ids": main_tutor_ids,
         "tech_tutor_ids": tech_tutor_ids,
         "lecture_dashboard_ids": lecture_dashboard_ids,
-        "day_number": 1,  # 동일 course 내 순서는 날짜 정렬로 후처리
+        "day_number": 1,
     }

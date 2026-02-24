@@ -23,3 +23,7 @@ class InstructorRepository(ABC):
     @abstractmethod
     async def delete_instructor(self, instructor_id: str) -> bool:
         ...
+
+    @abstractmethod
+    async def upsert_instructor(self, data: dict) -> dict:
+        ...
