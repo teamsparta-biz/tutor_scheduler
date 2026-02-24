@@ -64,7 +64,3 @@ export async function deleteInstructor(id: string): Promise<void> {
   }
 }
 
-export async function getAvailableInstructors(date: string): Promise<Instructor[]> {
-  const res = await fetchWithAuth(`/api/instructors/available?date=${date}`)
-  return handleResponse<Instructor[]>(res)
-}

@@ -44,20 +44,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await fetch('/api/auth/me', {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
-      console.log('[Auth] /api/auth/me status:', res.status)
       if (res.status === 403) {
         return 'denied'
       }
       if (res.status === 401) {
-        const body = await res.text()
-        console.error('[Auth] 401 응답:', body)
         return null
       }
-      const data = await handleResponse<UserProfile>(res)
-      console.log('[Auth] 프로필 조회 성공:', data)
-      return data
-    } catch (e) {
-      console.error('[Auth] fetchProfile 에러:', e)
+      return await handleResponse<UserProfile>(res)
+    } catch {
       return null
     }
   }
@@ -69,7 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') &&
           session
         ) {
-          console.log('[Auth] event:', event, 'email:', session.user?.email)
           setState((s) => ({ ...s, loading: true }))
           const result = await fetchProfile(session.access_token)
           if (result === 'denied') {
